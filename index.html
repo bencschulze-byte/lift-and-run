@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lift &amp; Run</title>
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0e1116">
+<link rel="stylesheet" href="styles.css">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lift &amp; Run">
+<meta name="description" content="Daily 45-minute strength and running program.">
+</head>
+<body>
+  <header class="appbar">
+    <h1 id="screen-title">Today</h1>
+    <div class="appbar-right"><span id="session-clock" class="clock" hidden></span></div>
+  </header>
+
+  <main id="app" class="screen"></main>
+
+  <div id="timer-bar" class="timer-bar" hidden></div>
+
+  <nav class="tabbar">
+    <a href="#/today" data-tab="today">Today</a>
+    <a href="#/week" data-tab="week">Week</a>
+    <a href="#/history" data-tab="history">History</a>
+    <a href="#/settings" data-tab="settings">Settings</a>
+  </nav>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>
