@@ -1,5 +1,7 @@
 // The Today screen: what to do right now, and one tap per set to log it.
-import { h, append, fmtLoad, fmtScheme, fmtPlates, fmtNumber, fmtMinutes, onLongPress, toast } from './dom.js';
+import {
+  h, append, bigLoad, fmtLoad, fmtScheme, fmtPlates, fmtNumber, fmtMinutes, onLongPress, toast,
+} from './dom.js';
 import { planFor, BUDGET_MIN } from '../engine/template.js';
 import { startSession, finishSession } from '../session.js';
 import { renderCardio } from './cardio.js';
@@ -26,15 +28,14 @@ export function renderToday(ctx) {
 
 function header(ctx, plan, session) {
   return h('div', { class: 'card' },
-    h('div', { class: 'row between' },
-      h('div', {},
-        h('h2', {}, plan.name),
-        h('p', { class: 'muted' }, `${plan.dayName} - planned ${fmtMinutes(plan.estimate.total)}`),
-      ),
-      h('div', { class: 'row' },
-        plan.deloadWeek && h('span', { class: 'badge warn' }, 'Deload week'),
-        plan.swapped && h('span', { class: 'badge accent' }, 'Swapped in'),
-      ),
+    h('div', { class: 'titlebar' },
+      h('h2', {}, plan.name),
+      h('span', { class: 'eyebrow' }, `${plan.dayName} · ${fmtMinutes(plan.estimate.total)}`),
+    ),
+    h('hr', { class: 'rule' }),
+    (plan.deloadWeek || plan.swapped) && h('div', { class: 'row wrap' },
+      plan.deloadWeek && h('span', { class: 'badge warn' }, 'Deload week'),
+      plan.swapped && h('span', { class: 'badge accent' }, 'Swapped in'),
     ),
     !session && h('button', {
       class: 'primary wide',
@@ -58,8 +59,8 @@ function card(ctx, plan, session, item, index, overBudget) {
   const el = h('section', { class: `card${optional ? ' optional' : ''}${complete ? ' done' : ''}` },
     h('div', { class: 'row between' },
       h('div', { class: 'grow' },
+        h('p', { class: 'eyebrow' }, optional ? `${item.role} · optional today` : item.role),
         h('h2', {}, ex.name),
-        h('p', { class: 'muted' }, `${item.role}${optional ? ' - optional today' : ''}`),
       ),
       h('a', { class: 'btn small ghost', href: `#/exercise/${ex.id}` }, 'Detail'),
     ),
@@ -92,7 +93,7 @@ function card(ctx, plan, session, item, index, overBudget) {
   const plates = fmtPlates(item.weight, ex, ctx.doc.settings);
   append(el,
     h('div', { class: 'row between wrap' },
-      h('span', { class: 'big' }, fmtLoad(item.weight, ex)),
+      bigLoad(item.weight, ex),
       h('span', { class: 'badge' }, fmtScheme(item.scheme, ex)),
     ),
     plates && h('p', { class: 'muted' }, plates),
@@ -105,8 +106,18 @@ function card(ctx, plan, session, item, index, overBudget) {
     rows.append(setRow(ctx, plan, index, item, null, i, false));
   }
   if (ex.unilateral) rows.append(h('p', { class: 'muted' }, 'Each set is both legs - log it once both are done.'));
-  append(el, rows);
+  append(el, rows, progressBar(logged.length, item.scheme.sets));
   return el;
+}
+
+// "2 of 5 done" - the one glance that tells you where you are in the exercise.
+function progressBar(done, total) {
+  if (!total) return null;
+  const pct = Math.min(100, (done / total) * 100);
+  return h('div', { class: `progress${done >= total ? ' complete' : ''}` },
+    h('span', { class: 'track' }, h('span', { class: 'fill', style: `width:${pct}%` })),
+    h('span', { class: 'count' }, `${done} of ${total} done`),
+  );
 }
 
 function setRow(ctx, plan, itemIndex, item, rampSet, i, isRamp) {
@@ -125,7 +136,12 @@ function setRow(ctx, plan, itemIndex, item, rampSet, i, isRamp) {
   const enough = isRamp ? rampSet.reps : (item.scheme.repMin ?? item.scheme.reps);
   const state = !stored ? '' : (Number(stored.reps) >= enough ? ' logged' : ' short');
 
-  const button = h('button', { class: `tapset${state}` }, `${reps}`);
+  const justLogged = lastLogged
+    && lastLogged.itemIndex === itemIndex && lastLogged.i === i && lastLogged.isRamp === isRamp;
+  const button = h('button', { class: `tapset${state}${justLogged ? ' just-logged' : ''}` },
+    `${reps}`,
+    stored && state === ' logged' ? h('span', { class: 'tick' }, '✓') : null,
+  );
   button.addEventListener('click', () => {
     if (button.consumedLongPress?.()) return;
     if (!stored) logSet(ctx, plan, itemIndex, i, isRamp, { weight, reps: prescribedReps });
@@ -135,7 +151,7 @@ function setRow(ctx, plan, itemIndex, item, rampSet, i, isRamp) {
 
   return h('div', { class: `setrow${isRamp ? ' ramp' : ''}` },
     h('span', { class: 'idx' }, isRamp ? 'W' : `${i + 1}`),
-    h('span', { class: 'load' }, fmtLoad(weight, ex), isRamp ? ' - warm-up' : ''),
+    h('span', { class: 'load' }, fmtLoad(weight, ex), isRamp ? ' warm-up' : ''),
     button,
   );
 }
@@ -162,8 +178,13 @@ function openEditor(ctx, plan, itemIndex, i, isRamp, current) {
   dialog.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
+// Which set just landed, so the re-render can animate that one button.
+let lastLogged = null;
+
 function logSet(ctx, plan, itemIndex, i, isRamp, { weight, reps }) {
   const item = plan.items[itemIndex];
+  lastLogged = { itemIndex, i, isRamp };
+  setTimeout(() => { lastLogged = null; }, 400);
   ctx.update((d) => {
     d.activeSession = d.activeSession ?? startSession(plan);
     const entry = d.activeSession.exercises[itemIndex];

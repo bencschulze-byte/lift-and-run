@@ -116,3 +116,17 @@ export function append(el, ...children) {
   }
   return el;
 }
+
+// The prescription as a display number: the weight loud, the unit quiet.
+export function bigLoad(weight, exercise) {
+  const unit = (text) => h('span', { class: 'unit' }, text);
+  if (!exercise || exercise.loadType === 'bodyweight') return h('span', { class: 'big' }, 'Bodyweight');
+  if (exercise.addedWeight && !weight) return h('span', { class: 'big' }, 'Bodyweight');
+  if (exercise.addedWeight) {
+    return h('span', { class: 'big' }, unit('BW + '), fmtNumber(weight), unit(' lb'));
+  }
+  if (exercise.loadType === 'dumbbell') {
+    return h('span', { class: 'big' }, fmtNumber(weight), unit(' lb each'));
+  }
+  return h('span', { class: 'big' }, fmtNumber(weight), unit(' lb'));
+}

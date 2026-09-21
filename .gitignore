@@ -1,2 +1,4 @@
 .DS_Store
 Thumbs.db
+# throwaway training data for looking at the charts (tools are in the scratchpad)
+demo.json

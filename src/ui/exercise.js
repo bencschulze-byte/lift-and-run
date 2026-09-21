@@ -4,7 +4,7 @@ import { h, append, fmtLoad, fmtNumber, fmtDate, fmtScheme, toast, confirmDanger
 import { weeksSince } from '../engine/dates.js';
 import { isCalibratedType } from '../engine/defaults.js';
 import { swapSlot } from '../session.js';
-import { liftSeries, lineChart } from './history.js';
+import { liftSeries, liftChart } from './history.js';
 
 const STALE_WEEKS = 8;
 
@@ -153,10 +153,7 @@ function historyCard(ctx, exercise) {
     h('h3', {}, 'History'),
     points.length
       ? h('div', {},
-        lineChart(points, [
-          { key: 'weight', label: 'Top set' },
-          { key: 'e1RM', label: 'Estimated 1RM', alt: true },
-        ]),
+        liftChart(points, exercise),
         h('div', { class: 'list' }, ...points.slice(-10).reverse().map((p) => h('div', { class: 'item' },
           h('span', {}, fmtDate(p.date)),
           h('span', { class: 'mono' }, `${fmtLoad(p.weight, exercise)}${p.result === 'fail' ? ' - missed' : ''}`),
