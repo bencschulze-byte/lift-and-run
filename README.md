@@ -43,8 +43,10 @@ its own path. `.nojekyll` is there so GitHub Pages serves everything as-is.
 3. Open it from the home screen. It runs full screen with no browser chrome, and after
    one online visit it loads with airplane mode on.
 
-To get an update after a deploy: open the app, pull down to refresh, and if it is being
-stubborn, remove it from the home screen and add it again.
+To get an update after a deploy, open the app **twice**. The first launch notices the new
+service worker and downloads the new files in the background; the second launch runs them.
+That is normal service worker behaviour, not a bug. If it is still stubborn, remove it from
+the home screen and add it again.
 
 ## Gist sync
 
