@@ -157,3 +157,13 @@ test('reset clears the document but not the sync connection', () => {
   assert.equal(storage.getToken(), null);
   assert.equal(storage.getGistId(), null);
 });
+
+test('reload picks up a write made by another tab', () => {
+  const { backend, storage } = store();
+  storage.load();
+  const other = createStorage(backend, { now: at('2026-09-21T13:00:00.000Z') });
+  other.update((doc) => { doc.settings.microplates = true; });
+
+  assert.equal(storage.load().settings.microplates, false, 'the cached copy is stale');
+  assert.equal(storage.reload().settings.microplates, true);
+});

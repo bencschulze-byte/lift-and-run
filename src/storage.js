@@ -114,8 +114,10 @@ export function createStorage(backend, { now = () => new Date() } = {}) {
   }
 
   // Every save stamps updatedAt and marks the document dirty for sync.
-  function save(doc, { dirty = true } = {}) {
-    const stamped = { ...doc, updatedAt: now().toISOString() };
+  // Sync adopts remote documents with stamp:false, so that taking someone
+  // else's copy does not make this device look like the newer one.
+  function save(doc, { dirty = true, stamp = true } = {}) {
+    const stamped = stamp ? { ...doc, updatedAt: now().toISOString() } : doc;
     write(stamped, { dirty });
     for (const fn of listeners) fn(stamped);
     return stamped;
@@ -147,6 +149,13 @@ export function createStorage(backend, { now = () => new Date() } = {}) {
     return load();
   }
 
+  // Drop the in-memory copy and read the backend again. Needed when another
+  // tab of the app has written to the same storage underneath us.
+  function reload() {
+    cache = null;
+    return load();
+  }
+
   return {
     load,
     save,
@@ -154,6 +163,7 @@ export function createStorage(backend, { now = () => new Date() } = {}) {
     exportJSON,
     importJSON,
     reset,
+    reload,
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
 
     isDirty: () => store.getItem(DIRTY_KEY) === '1',

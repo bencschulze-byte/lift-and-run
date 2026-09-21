@@ -1,5 +1,5 @@
 // Hash router and bootstrap.
-import { createStorage } from './storage.js';
+import { createStorage, DOC_KEY } from './storage.js';
 import { createRestTimer, createWakeLock } from './ui/timer.js';
 import { toISODate } from './engine/dates.js';
 import { h, clear, fmtClock } from './ui/dom.js';
@@ -10,6 +10,7 @@ import { renderHistory } from './ui/history.js';
 import { renderExercise } from './ui/exercise.js';
 import { renderSettings } from './ui/settings.js';
 import { commitPendingRotations } from './session.js';
+import { createSync } from './sync.js';
 
 const storage = createStorage();
 const app = document.getElementById('app');
@@ -17,6 +18,7 @@ const titleEl = document.getElementById('screen-title');
 const clockEl = document.getElementById('session-clock');
 const timer = createRestTimer(document.getElementById('timer-bar'));
 const wakeLock = createWakeLock();
+const sync = createSync({ storage });
 
 // A dev aid: ?date=2026-09-21 pretends it is that day.
 const forcedDate = new URLSearchParams(location.search).get('date');
@@ -28,6 +30,7 @@ const ctx = {
   storage,
   timer,
   wakeLock,
+  sync,
   get doc() { return storage.load(); },
   today: () => (forcedDate ? forcedDate : toISODate(new Date())),
   update(fn, options) { storage.update(fn, options); render(); },
@@ -106,8 +109,37 @@ window.addEventListener('hashchange', render);
 setInterval(tickClock, 1000);
 render();
 
-// The service worker is registered only where it exists (it is added in the
-// PWA phase and is absent when running from a plain file:// copy).
+// --- sync: never in the way of a set ---------------------------------------
+
+// Every save queues a push, debounced 3 s. Nothing happens while disconnected.
+storage.subscribe(() => sync.schedulePush());
+
+// Catch up when the phone comes back: signal, or the app returning to view.
+window.addEventListener('online', () => sync.pushIfDirty());
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') sync.pushIfDirty();
+});
+
+// When sync changes the document underneath us, redraw.
+let seenRevision = sync.status.revision;
+sync.subscribe((status) => {
+  if (status.revision === seenRevision) return;
+  seenRevision = status.revision;
+  render();
+});
+
+// Another tab of the app writing to the same storage: re-read and redraw.
+window.addEventListener('storage', (event) => {
+  if (event.key !== DOC_KEY) return;
+  storage.reload();
+  render();
+});
+
+// Pull on open, once, quietly.
+if (sync.connected()) sync.syncNow();
+
+// The service worker is registered only where it exists (it is absent when
+// running from a plain file:// copy).
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').catch(() => {});
