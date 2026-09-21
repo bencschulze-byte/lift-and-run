@@ -27,6 +27,7 @@ export function renderExercise(ctx, exerciseId) {
         h('span', { class: 'badge' }, exercise.type),
       ),
       h('p', { class: 'muted' }, `${exercise.muscles.join(', ')} - ${fmtScheme(exercise.repScheme, exercise)}`),
+      exercise.description && h('p', { class: 'dim' }, exercise.description),
       line('Prescription', state.manualOverride ?? state.workingWeight, exercise),
       calibrated && line('5RM', state.fiveRM, exercise),
       calibrated && h('div', { class: 'summary-line' },

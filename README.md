@@ -95,7 +95,8 @@ tools/                serve.mjs, make-icons.mjs, bump-cache.mjs
 ```
 
 **To change the program, change `src/engine/defaults.js`.** The exercise catalog, the
-menus behind each slot and the seven-day template are all data. The screens never hard-code
+plain-language description shown behind each "How to do it", the menus behind each slot
+and the seven-day template are all data. The screens never hard-code
 an exercise. Adding an exercise to the catalog makes it appear for existing installs too:
 `normalize()` in `storage.js` merges new catalog entries into a stored document without
 touching the choices already made in it.

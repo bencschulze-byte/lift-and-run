@@ -20,7 +20,7 @@ test('a fresh install creates a full default document', () => {
   assert.equal(doc.settings.barWeight, 45);
   assert.deepEqual(doc.settings.plates, [45, 35, 25, 10, 5, 2.5]);
   assert.equal(doc.settings.microplates, false);
-  assert.equal(Object.keys(doc.slots).length, 16);
+  assert.equal(Object.keys(doc.slots).length, 17);
   assert.equal(doc.slots['lowerA-main'].current, 'back-squat');
   assert.equal(doc.exercises['back-squat'].increment, 5);
   assert.deepEqual(doc.sessions, []);
@@ -166,4 +166,25 @@ test('reload picks up a write made by another tab', () => {
 
   assert.equal(storage.load().settings.microplates, false, 'the cached copy is stale');
   assert.equal(storage.reload().settings.microplates, true);
+});
+
+test('a phone set up before a slot existed picks it up on the next load', () => {
+  // What an install from an earlier release looks like: its own template, and
+  // no idea that Monday now finishes with core work.
+  const old = {
+    schemaVersion: 1,
+    settings: { barWeight: 45, programStart: '2026-09-21' },
+    slots: { 'lowerA-acc1': { id: 'lowerA-acc1', current: 'nordic-curl' } },
+    liftState: { 'back-squat': { workingWeight: 175, failStreak: 1 } },
+    sessions: [{ id: 's1', date: '2026-09-21', dayIndex: 0, kind: 'lift', exercises: [] }],
+    template: [{ dayIndex: 0, name: 'Lower A', kind: 'lift', slots: ['lowerA-main', 'lowerA-secondary', 'lowerA-acc1', 'lowerA-acc2'] }],
+  };
+  const doc = migrate(old);
+  assert.ok(doc.slots['lowerA-acc3'], 'the new slot is there');
+  assert.equal(doc.slots['lowerA-acc3'].current, 'pallof-press');
+  assert.ok(doc.template[0].slots.includes('lowerA-acc3'), 'and Monday actually runs it');
+  assert.equal(doc.template.length, 7, 'the rest of the week comes back too');
+  assert.equal(doc.slots['lowerA-acc1'].current, 'nordic-curl', 'without disturbing their choices');
+  assert.equal(doc.liftState['back-squat'].failStreak, 1);
+  assert.equal(doc.sessions.length, 1);
 });

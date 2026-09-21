@@ -23,14 +23,27 @@ function calibrated(d, entries) {
   return d;
 }
 
-test('Monday is Lower A with four slots in order', () => {
+test('Monday is Lower A, in order, with core at the end', () => {
   const plan = planFor(doc(), MON);
   assert.equal(plan.kind, 'lift');
   assert.equal(plan.name, 'Lower A');
   assert.deepEqual(plan.items.map((i) => i.exerciseId), [
-    'back-squat', 'romanian-deadlift', 'leg-curl', 'standing-calf-raise',
+    'back-squat', 'romanian-deadlift', 'leg-curl', 'standing-calf-raise', 'pallof-press',
   ]);
-  assert.deepEqual(plan.items.map((i) => i.role), ['main', 'secondary', 'accessory', 'accessory']);
+  assert.deepEqual(plan.items.map((i) => i.role),
+    ['main', 'secondary', 'accessory', 'accessory', 'accessory']);
+});
+
+test('every lifting day trains the core at least once a week', () => {
+  const d = doc();
+  const core = new Set();
+  for (const date of [MON, TUE, THU, FRI]) {
+    for (const item of planFor(d, date).items) {
+      if (item.exercise.muscles.includes('core')) core.add(`${date}:${item.exerciseId}`);
+    }
+  }
+  assert.equal(core.size, 3, 'Pallof press on Monday, leg raise and crunch on Thursday');
+  assert.ok([...core].some((k) => k.startsWith(MON)), 'and not all on one day');
 });
 
 test('the rest of the week follows the template', () => {
@@ -159,4 +172,10 @@ test('the week overview marks today and finished sessions', () => {
   assert.equal(week[1].done, false);
   assert.equal(week[2].isToday, true);
   assert.equal(week[6].date, SUN);
+});
+
+test('every exercise explains itself', () => {
+  const d = doc();
+  const missing = Object.values(d.exercises).filter((e) => !e.description || e.description.length < 40);
+  assert.deepEqual(missing.map((e) => e.id), [], 'an exercise with no usable description');
 });

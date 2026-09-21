@@ -1,6 +1,6 @@
 // The Today screen: what to do right now, and one tap per set to log it.
 import {
-  h, append, bigLoad, fmtLoad, fmtScheme, fmtPlates, fmtNumber, fmtMinutes, onLongPress, toast,
+  h, append, bigLoad, howTo, fmtLoad, fmtScheme, fmtPlates, fmtNumber, fmtMinutes, onLongPress, toast,
 } from './dom.js';
 import { planFor, BUDGET_MIN } from '../engine/template.js';
 import { startSession, finishSession } from '../session.js';
@@ -80,13 +80,14 @@ function card(ctx, plan, session, item, index, overBudget) {
   if (item.needsCalibration) {
     append(el,
       h('p', { class: 'muted' }, 'First time on this lift. A short ramp sets your working weight.'),
+      howTo(ex),
       h('button', { class: 'primary wide', onclick: () => ctx.navigate(`#/calibrate/${ex.id}`) }, 'Calibrate'),
     );
     return el;
   }
 
   if (item.needsStartingWeight) {
-    append(el, startingWeightForm(ctx, ex));
+    append(el, howTo(ex), startingWeightForm(ctx, ex));
     return el;
   }
 
@@ -105,8 +106,8 @@ function card(ctx, plan, session, item, index, overBudget) {
   for (let i = 0; i < item.scheme.sets; i++) {
     rows.append(setRow(ctx, plan, index, item, null, i, false));
   }
-  if (ex.unilateral) rows.append(h('p', { class: 'muted' }, 'Each set is both legs - log it once both are done.'));
-  append(el, rows, progressBar(logged.length, item.scheme.sets));
+  if (ex.unilateral) rows.append(h('p', { class: 'muted' }, 'Each set is both sides - log it once you have done both.'));
+  append(el, rows, progressBar(logged.length, item.scheme.sets), howTo(ex));
   return el;
 }
 
@@ -237,10 +238,13 @@ function startingWeightForm(ctx, ex) {
 }
 
 function supersetNote(plan) {
-  const accessories = plan.items.filter((i) => i.role === 'accessory');
-  if (accessories.length < 2) return null;
-  return h('p', { class: 'muted' },
-    `Superset: alternate ${accessories.map((a) => a.exercise.name).join(' and ')}, 60-90 s after each pair.`);
+  const names = plan.items.filter((i) => i.role === 'accessory').map((a) => a.exercise.name);
+  if (names.length < 2) return null;
+  if (names.length === 2) {
+    return h('p', { class: 'muted' }, `Superset: alternate ${names.join(' and ')}, 60-90 s after each pair.`);
+  }
+  const list = `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
+  return h('p', { class: 'muted' }, `Superset: rotate through ${list}, 60-90 s after each round.`);
 }
 
 function finishRow(ctx, plan, session) {

@@ -1,5 +1,5 @@
 // The calibration wizard: one ramp set per screen, five big buttons.
-import { h, fmtLoad, fmtPlates, fmtNumber, fmtClock, toast } from './dom.js';
+import { h, howTo, fmtLoad, fmtPlates, fmtNumber, fmtClock, toast } from './dom.js';
 import {
   startCalibration, applyFeedback, stopHere, nextSet, finishCalibration,
   suggestsPulldownSwap, FEEDBACK, MAX_RAMP_SETS,
@@ -37,10 +37,11 @@ export function renderCalibrate(ctx, exerciseId) {
         'Ramp up in fives until five reps feels like a limit. This replaces today\'s work for this lift.'),
       h('div', { class: 'wizard-weight' },
         h('p', { class: 'big' }, fmtLoad(set.weight, exercise)),
-        h('p', { class: 'muted' }, `5 reps${set.perLeg ? ' per leg' : ''}`),
+        h('p', { class: 'muted' }, `5 reps${set.perLeg ? ' per side' : ''}`),
         fmtPlates(set.weight, exercise, doc.settings) && h('p', { class: 'muted' }, fmtPlates(set.weight, exercise, doc.settings)),
       ),
       h('p', { class: 'muted' }, `Rest ${fmtClock(set.restSeconds)} between sets.`),
+      howTo(exercise, { open: state.sets.length === 0 }),
     ),
     h('section', { class: 'card' },
       h('h3', {}, 'How did that feel?'),

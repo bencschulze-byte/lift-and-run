@@ -5,7 +5,7 @@
 // files. Run `node tools/bump-cache.mjs` before pushing - it bumps this
 // number and rewrites SHELL from what is actually on disk.
 
-const CACHE_VERSION = 'v6';
+const CACHE_VERSION = 'v8';
 const CACHE = `lift-and-run-${CACHE_VERSION}`;
 
 const SHELL = [

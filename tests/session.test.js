@@ -35,7 +35,7 @@ test('a fresh Lower A session mirrors the plan', () => {
   const session = startSession(planFor(d, MON), NOW);
   assert.equal(session.kind, 'lift');
   assert.equal(session.date, MON);
-  assert.equal(session.exercises.length, 4);
+  assert.equal(session.exercises.length, 5);
   assert.equal(session.exercises[0].result, null, 'nothing has happened yet');
   assert.equal(session.exercises[0].prescribedWeight, null, 'the squat is not calibrated yet');
   assert.equal(session.finishedAt, null);

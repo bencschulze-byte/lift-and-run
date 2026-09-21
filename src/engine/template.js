@@ -144,11 +144,14 @@ export function estimateMinutes(items = []) {
   }
 
   if (accessories.length) {
-    // The two accessories are supersetted, so they cost one block, not two.
-    const pairs = Math.max(...accessories.map((a) => a.scheme?.sets ?? 0));
-    const perPair = accessories.reduce((sum, a) => sum + workMin(a.exercise), 0);
-    const minutes = round1(pairs * perPair + Math.max(0, pairs - 1) * SUPERSET_REST_MIN);
-    for (const a of accessories) perItem.push({ slotId: a.slotId, minutes: round1(minutes / accessories.length) });
+    // Accessories are supersetted, so they cost one block rather than one each:
+    // the work of every set, plus a rest between rounds.
+    const rounds = Math.max(...accessories.map((a) => a.scheme?.sets ?? 0));
+    const work = accessories.reduce((sum, a) => sum + (a.scheme?.sets ?? 0) * workMin(a.exercise), 0);
+    const minutes = round1(work + Math.max(0, rounds - 1) * SUPERSET_REST_MIN);
+    for (const a of accessories) {
+      perItem.push({ slotId: a.slotId, minutes: round1((a.scheme?.sets ?? 0) * workMin(a.exercise)) });
+    }
     total += minutes;
   }
 

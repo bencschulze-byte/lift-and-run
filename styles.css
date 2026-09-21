@@ -333,6 +333,25 @@ ol.muted, ul.muted { padding-left: 20px; margin: 0; display: flex; flex-directio
 
 .editor { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end; }
 
+/* "How to do it": a quiet line that opens into a description. */
+.howto { border-top: 1px solid var(--line-soft); padding-top: 4px; }
+.howto summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 13.5px;
+  color: var(--accent);
+  user-select: none;
+}
+.howto summary::-webkit-details-marker { display: none; }
+.howto summary::after { content: "+"; font-size: 17px; color: var(--muted); line-height: 1; }
+.howto[open] summary::after { content: "–"; }
+.howto p { font-size: 14.5px; color: var(--text-dim); padding-bottom: 6px; }
+
 /* --- rest timer --------------------------------------------------------- */
 
 .timer-bar {

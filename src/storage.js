@@ -72,7 +72,10 @@ export function normalize(doc) {
     out.slots[slot.id] = { ...slot, ...(stored ?? {}), options: slot.options.slice() };
   }
   out.liftState = { ...(doc.liftState ?? {}) };
-  out.template = doc.template ?? createProgramDocument().template;
+  // The template is program data, not user data: nothing in the app edits it,
+  // so always take the current one. Otherwise a slot added in a later release
+  // would never reach a phone that is already set up.
+  out.template = createProgramDocument().template;
   out.rotations = doc.rotations ?? [];
   out.swaps = doc.swaps ?? {};
   out.cardioState = { z5Step: 0, z5WeeksAtStep: 0, ...(doc.cardioState ?? {}) };

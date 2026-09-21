@@ -44,9 +44,9 @@ export function fmtLoad(weight, exercise) {
 
 export function fmtScheme(scheme, exercise) {
   if (!scheme) return '';
-  const perLeg = exercise?.unilateral ? ' per leg' : '';
-  if (scheme.reps) return `${scheme.sets} x ${scheme.reps}${perLeg}`;
-  return `${scheme.sets} x ${scheme.repMin}-${scheme.repMax}${perLeg}`;
+  const perSide = exercise?.unilateral ? ' per side' : '';
+  if (scheme.reps) return `${scheme.sets} x ${scheme.reps}${perSide}`;
+  return `${scheme.sets} x ${scheme.repMin}-${scheme.repMax}${perSide}`;
 }
 
 // "135 = 45 per side" - the number that stops you doing mental arithmetic mid-set.
@@ -129,4 +129,14 @@ export function bigLoad(weight, exercise) {
     return h('span', { class: 'big' }, fmtNumber(weight), unit(' lb each'));
   }
   return h('span', { class: 'big' }, fmtNumber(weight), unit(' lb'));
+}
+
+// "How to do it", collapsed. Costs one line when you know the lift, one tap
+// when you do not.
+export function howTo(exercise, { open = false } = {}) {
+  if (!exercise?.description) return null;
+  return h('details', { class: 'howto', open },
+    h('summary', {}, 'How to do it'),
+    h('p', {}, exercise.description),
+  );
 }
