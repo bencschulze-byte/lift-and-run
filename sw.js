@@ -5,7 +5,7 @@
 // files. Run `node tools/bump-cache.mjs` before pushing - it bumps this
 // number and rewrites SHELL from what is actually on disk.
 
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5';
 const CACHE = `lift-and-run-${CACHE_VERSION}`;
 
 const SHELL = [
@@ -43,8 +43,16 @@ const SHELL = [
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE);
-    // One missing file must not fail the whole install.
-    await Promise.all(SHELL.map((path) => cache.add(path).catch(() => {})));
+    await Promise.all(SHELL.map(async (path) => {
+      try {
+        // `cache: 'reload'` goes past the browser's own HTTP cache. Without it
+        // a fresh deploy can be cached from a stale copy, and bumping
+        // CACHE_VERSION achieves nothing.
+        const response = await fetch(new Request(path, { cache: 'reload' }));
+        // One missing file must not fail the whole install.
+        if (response.ok) await cache.put(path, response);
+      } catch { /* offline during install: the runtime handler will fill in */ }
+    }));
     await self.skipWaiting();
   })());
 });
