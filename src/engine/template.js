@@ -91,7 +91,7 @@ function buildItem(doc, slot, { deload, settings }) {
     role: slot.role,
     exerciseId: exercise.id,
     exercise,
-    optional: false,
+    optional: !!slot.optional,
     restSeconds: restSecondsFor(slot.role),
   };
 
@@ -124,14 +124,17 @@ function buildItem(doc, slot, { deload, settings }) {
   };
 }
 
-// Honest time estimate: unilateral work counts both legs.
+// Honest time estimate: unilateral work counts both legs. Optional items are
+// costed on their own and left out of the total, so they never push a day
+// over the budget; the total is what the day takes without them.
 export function estimateMinutes(items = []) {
   const perItem = [];
   let total = GENERAL_WARMUP_MIN;
+  let optional = 0;
 
-  const accessories = items.filter((i) => i.role === 'accessory');
+  const accessories = items.filter((i) => i.role === 'accessory' && !i.optional);
   for (const item of items) {
-    if (item.role === 'accessory') continue;
+    if (item.role === 'accessory' && !item.optional) continue;
     const w = workMin(item.exercise);
     const rampWork = item.exercise.unilateral ? RAMP_WORK_MIN * 2 : RAMP_WORK_MIN;
     const ramp = (item.ramp?.length ?? 0) * (rampWork + RAMP_REST_MIN);
@@ -139,8 +142,9 @@ export function estimateMinutes(items = []) {
     const rest = (item.restSeconds ?? 120) / 60;
     const working = sets * w + Math.max(0, sets - 1) * rest;
     const minutes = round1(ramp + working);
-    perItem.push({ slotId: item.slotId, minutes });
-    total += minutes;
+    perItem.push({ slotId: item.slotId, minutes, optional: !!item.optional });
+    if (item.optional) optional += minutes;
+    else total += minutes;
   }
 
   if (accessories.length) {
@@ -155,7 +159,7 @@ export function estimateMinutes(items = []) {
     total += minutes;
   }
 
-  return { total: round1(total), warmup: GENERAL_WARMUP_MIN, items: perItem };
+  return { total: round1(total), optional: round1(optional), warmup: GENERAL_WARMUP_MIN, items: perItem };
 }
 
 // Seven tiles for the Week screen.

@@ -69,7 +69,8 @@ export function normalize(doc) {
   out.slots = { ...doc.slots };
   for (const slot of SLOTS) {
     const stored = doc.slots?.[slot.id];
-    out.slots[slot.id] = { ...slot, ...(stored ?? {}), options: slot.options.slice() };
+    // Whether a slot is optional is program data, never a stored choice.
+    out.slots[slot.id] = { ...slot, ...(stored ?? {}), options: slot.options.slice(), optional: slot.optional };
   }
   out.liftState = { ...(doc.liftState ?? {}) };
   // The template is program data, not user data: nothing in the app edits it,

@@ -48,7 +48,7 @@ const ROUTES = [
   [/^#\/week$/, () => renderWeek(ctx)],
   [/^#\/history$/, () => renderHistory(ctx)],
   [/^#\/settings$/, () => renderSettings(ctx)],
-  [/^#\/exercise\/([\w-]+)$/, (m) => renderExercise(ctx, m[1])],
+  [/^#\/exercise\/([\w-]+)(?:\/([\w-]+))?$/, (m) => renderExercise(ctx, m[1], m[2])],
   [/^#\/calibrate\/([\w-]+)$/, (m) => renderCalibrate(ctx, m[1])],
 ];
 

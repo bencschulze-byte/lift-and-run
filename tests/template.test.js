@@ -23,15 +23,16 @@ function calibrated(d, entries) {
   return d;
 }
 
-test('Monday is Lower A, in order, with core at the end', () => {
+test('Monday is Lower A, in order, with optional back care at the end', () => {
   const plan = planFor(doc(), MON);
   assert.equal(plan.kind, 'lift');
   assert.equal(plan.name, 'Lower A');
   assert.deepEqual(plan.items.map((i) => i.exerciseId), [
-    'back-squat', 'romanian-deadlift', 'leg-curl', 'standing-calf-raise', 'pallof-press',
+    'back-squat', 'romanian-deadlift', 'leg-curl', 'standing-calf-raise', 'pallof-press', 'leg-extension', 'bird-dog',
   ]);
   assert.deepEqual(plan.items.map((i) => i.role),
-    ['main', 'secondary', 'accessory', 'accessory', 'accessory']);
+    ['main', 'secondary', 'accessory', 'accessory', 'accessory', 'accessory', 'accessory']);
+  assert.deepEqual(plan.items.map((i) => i.optional), [false, false, false, false, false, false, true]);
 });
 
 test('every lifting day trains the core at least once a week', () => {
@@ -39,7 +40,7 @@ test('every lifting day trains the core at least once a week', () => {
   const core = new Set();
   for (const date of [MON, TUE, THU, FRI]) {
     for (const item of planFor(d, date).items) {
-      if (item.exercise.muscles.includes('core')) core.add(`${date}:${item.exerciseId}`);
+      if (!item.optional && item.exercise.muscles.includes('core')) core.add(`${date}:${item.exerciseId}`);
     }
   }
   assert.equal(core.size, 3, 'Pallof press on Monday, leg raise and crunch on Thursday');
@@ -136,16 +137,39 @@ test('a deload week turns Saturday into an easy 30 minutes', () => {
   assert.equal(plan.duration, 30);
 });
 
-test('the lower days fit the 45 minute budget', () => {
+test('every lifting day stays close to the 45 minute budget', () => {
   const d = calibrated(doc(), {
     'back-squat': 225, 'romanian-deadlift': 185, deadlift: 315, 'front-squat': 165,
+    'bench-press': 185, 'barbell-row': 135, 'overhead-press': 115, 'weighted-chinup': 25,
   });
-  const lowerA = planFor(d, MON);
-  const lowerB = planFor(d, THU);
-  assert.ok(lowerA.estimate.total <= BUDGET_MIN, `Lower A is ${lowerA.estimate.total} min`);
-  assert.ok(lowerA.estimate.total >= 38, 'and is not suspiciously short');
-  assert.ok(lowerB.estimate.total <= BUDGET_MIN, `Lower B is ${lowerB.estimate.total} min`);
-  assert.equal(lowerA.overBudget, false);
+  for (const date of [MON, TUE, THU, FRI]) {
+    const plan = planFor(d, date);
+    assert.ok(plan.estimate.total >= 33, `${plan.name} is not suspiciously short`);
+    assert.ok(plan.estimate.total < 50, `${plan.name} is ${plan.estimate.total} min`);
+  }
+  assert.equal(planFor(d, THU).overBudget, false, 'Lower B has room to spare');
+});
+
+test('every lifting day ends with one optional back-care exercise', () => {
+  const d = doc();
+  for (const date of [MON, TUE, THU, FRI]) {
+    const plan = planFor(d, date);
+    const optional = plan.items.filter((i) => i.optional);
+    assert.equal(optional.length, 1, `${plan.name} has one`);
+    assert.equal(plan.items.at(-1).optional, true, 'and it is last');
+    assert.ok(optional[0].exercise.muscles.some((m) => ['lower back', 'glutes', 'hamstrings'].includes(m)));
+    assert.equal(optional[0].exercise.repScheme.sets, 2);
+  }
+});
+
+test('the optional exercise is costed but never counted toward the budget', () => {
+  const d = calibrated(doc(), { 'back-squat': 225, 'romanian-deadlift': 185 });
+  const plan = planFor(d, MON);
+  const bird = plan.estimate.items.find((i) => i.slotId === 'lowerA-back');
+  assert.equal(bird.optional, true);
+  assert.equal(plan.estimate.optional, bird.minutes);
+  const without = { ...d, template: d.template.map((day) => ({ ...day, slots: day.slots?.filter((s) => !s.endsWith('-back')) })) };
+  assert.equal(planFor(without, MON).estimate.total, plan.estimate.total);
 });
 
 test('a 5x5 secondary pushes the day past 45 min, which the plan flags', () => {

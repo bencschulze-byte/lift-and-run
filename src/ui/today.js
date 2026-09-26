@@ -16,7 +16,9 @@ export function renderToday(ctx) {
 
   const session = activeSession(doc, plan);
   const elapsed = session ? (Date.now() - new Date(session.startedAt).getTime()) / 60000 : 0;
-  const overBudget = plan.overBudget || elapsed > BUDGET_MIN;
+  // Accessories turn optional once the clock actually passes 45 min, not
+  // because the estimate says it might.
+  const overBudget = elapsed > BUDGET_MIN;
 
   return h('div', { class: 'screen-body' },
     header(ctx, plan, session),
@@ -30,7 +32,8 @@ function header(ctx, plan, session) {
   return h('div', { class: 'card' },
     h('div', { class: 'titlebar' },
       h('h2', {}, plan.name),
-      h('span', { class: 'eyebrow' }, `${plan.dayName} · ${fmtMinutes(plan.estimate.total)}`),
+      h('span', { class: 'eyebrow' }, `${plan.dayName} · ${fmtMinutes(plan.estimate.total)}${
+        plan.estimate.optional ? ` + ${fmtMinutes(plan.estimate.optional)} optional` : ''}`),
     ),
     h('hr', { class: 'rule' }),
     (plan.deloadWeek || plan.swapped) && h('div', { class: 'row wrap' },
@@ -45,24 +48,26 @@ function header(ctx, plan, session) {
       },
     }, 'Start session'),
     plan.overBudget && h('p', { class: 'muted' },
-      'This one runs past 45 min: the accessories are optional.'),
+      'Estimated past 45 min. If the clock gets there, the accessories become optional.'),
   );
 }
 
 function card(ctx, plan, session, item, index, overBudget) {
   const entry = session?.exercises?.[index] ?? null;
   const ex = item.exercise;
-  const optional = overBudget && item.role === 'accessory';
+  const optional = item.optional || (overBudget && item.role === 'accessory');
+  const eyebrow = item.optional ? 'back care · optional'
+    : optional ? `${item.role} · optional today` : item.role;
   const logged = (entry?.sets ?? []).filter((s) => !s.ramp);
   const complete = logged.length >= (item.scheme?.sets ?? 99);
 
   const el = h('section', { class: `card${optional ? ' optional' : ''}${complete ? ' done' : ''}` },
     h('div', { class: 'row between' },
       h('div', { class: 'grow' },
-        h('p', { class: 'eyebrow' }, optional ? `${item.role} · optional today` : item.role),
+        h('p', { class: 'eyebrow' }, eyebrow),
         h('h2', {}, ex.name),
       ),
-      h('a', { class: 'btn small ghost', href: `#/exercise/${ex.id}` }, 'Detail'),
+      h('a', { class: 'btn small ghost', href: `#/exercise/${ex.id}/${item.slotId}` }, 'Detail'),
     ),
   );
 
@@ -188,6 +193,9 @@ function logSet(ctx, plan, itemIndex, i, isRamp, { weight, reps }) {
   setTimeout(() => { lastLogged = null; }, 400);
   ctx.update((d) => {
     d.activeSession = d.activeSession ?? startSession(plan);
+    // A session started before an update added slots has no entries for them yet.
+    const blank = startSession(plan).exercises;
+    for (let i = d.activeSession.exercises.length; i < blank.length; i++) d.activeSession.exercises.push(blank[i]);
     const entry = d.activeSession.exercises[itemIndex];
     entry.sets = entry.sets ?? [];
     if (isRamp) {
@@ -238,7 +246,7 @@ function startingWeightForm(ctx, ex) {
 }
 
 function supersetNote(plan) {
-  const names = plan.items.filter((i) => i.role === 'accessory').map((a) => a.exercise.name);
+  const names = plan.items.filter((i) => i.role === 'accessory' && !i.optional).map((a) => a.exercise.name);
   if (names.length < 2) return null;
   if (names.length === 2) {
     return h('p', { class: 'muted' }, `Superset: alternate ${names.join(' and ')}, 60-90 s after each pair.`);

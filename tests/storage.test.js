@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   createStorage, createMemoryBackend, migrate, normalize, DOC_KEY, TOKEN_KEY,
 } from '../src/storage.js';
-import { SCHEMA_VERSION } from '../src/engine/defaults.js';
+import { SCHEMA_VERSION, createProgramDocument } from '../src/engine/defaults.js';
 
 const at = (iso) => () => new Date(iso);
 
@@ -20,7 +20,7 @@ test('a fresh install creates a full default document', () => {
   assert.equal(doc.settings.barWeight, 45);
   assert.deepEqual(doc.settings.plates, [45, 35, 25, 10, 5, 2.5]);
   assert.equal(doc.settings.microplates, false);
-  assert.equal(Object.keys(doc.slots).length, 17);
+  assert.equal(Object.keys(doc.slots).length, 25);
   assert.equal(doc.slots['lowerA-main'].current, 'back-squat');
   assert.equal(doc.exercises['back-squat'].increment, 5);
   assert.deepEqual(doc.sessions, []);
@@ -187,4 +187,26 @@ test('a phone set up before a slot existed picks it up on the next load', () => 
   assert.equal(doc.slots['lowerA-acc1'].current, 'nordic-curl', 'without disturbing their choices');
   assert.equal(doc.liftState['back-squat'].failStreak, 1);
   assert.equal(doc.sessions.length, 1);
+});
+
+test('the extra and back-care slots reach an existing phone without touching its data', () => {
+  // A document as the previous release left it: five slots on Monday, four
+  // everywhere else, and a session in progress when the update arrives.
+  const fresh = createProgramDocument({ today: '2026-09-21' });
+  const old = structuredClone(fresh);
+  for (const id of Object.keys(old.slots)) if (/-(acc4|back)$/.test(id) || /^(upperA|lowerB|upperB)-acc3$/.test(id)) delete old.slots[id];
+  old.template = old.template.map((d) => ({ ...d, slots: d.slots?.filter((id) => old.slots[id]) }));
+  old.slots['upperA-acc2'].current = 'dips';
+  old.liftState = { 'bench-press': { workingWeight: 185, fiveRM: 210 }, dips: { workingWeight: 10 } };
+  old.sessions = [{ id: 's1', date: '2026-09-21', dayIndex: 0, kind: 'lift', exercises: [], finishedAt: 'x' }];
+  old.activeSession = { id: 's2', date: '2026-09-22', dayIndex: 1, exercises: [{ exerciseId: 'bench-press', sets: [{ weight: 185, reps: 5 }] }] };
+
+  const doc = migrate(JSON.parse(JSON.stringify(old)));
+  assert.equal(doc.template[1].slots.length, 6, 'Tuesday gains two slots');
+  assert.deepEqual(doc.template[1].slots.slice(0, 4), old.template[1].slots, 'after the ones it already had');
+  assert.equal(doc.slots['upperA-back'].optional, true);
+  assert.equal(doc.slots['upperA-acc2'].current, 'dips', 'the chosen exercise survives');
+  assert.deepEqual(doc.liftState, old.liftState);
+  assert.deepEqual(doc.sessions, old.sessions);
+  assert.deepEqual(doc.activeSession, old.activeSession, 'a session in progress is left alone');
 });

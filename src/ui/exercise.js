@@ -8,14 +8,18 @@ import { liftSeries, liftChart } from './history.js';
 
 const STALE_WEEKS = 8;
 
-export function renderExercise(ctx, exerciseId) {
+// slotId says which slot you came from, since one exercise can sit in more
+// than one; without it, the first slot that runs or offers it.
+export function renderExercise(ctx, exerciseId, slotId) {
   const doc = ctx.doc;
   const exercise = doc.exercises[exerciseId];
   if (!exercise) return h('div', { class: 'card' }, h('h2', {}, 'Unknown exercise'));
   ctx.setTitle(exercise.name);
 
   const state = doc.liftState[exerciseId] ?? {};
-  const slot = Object.values(doc.slots).find((s) => s.current === exerciseId)
+  const from = doc.slots[slotId];
+  const slot = (from?.options.includes(exerciseId) ? from : null)
+    ?? Object.values(doc.slots).find((s) => s.current === exerciseId)
     ?? Object.values(doc.slots).find((s) => s.options.includes(exerciseId));
   const calibrated = isCalibratedType(exercise);
   const stale = weeksSince(state.calibratedAt, ctx.today());
@@ -140,7 +144,7 @@ function swapCard(ctx, slot, exercise) {
           onclick: () => {
             ctx.storage.save(swapSlot(ctx.doc, slot.id, id, ctx.today()));
             toast(`Slot now runs ${other?.name ?? id}`);
-            ctx.navigate(`#/exercise/${id}`);
+            ctx.navigate(`#/exercise/${id}/${slot.id}`);
           },
         }, 'Use this'),
     ));

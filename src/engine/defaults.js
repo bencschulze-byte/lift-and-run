@@ -98,6 +98,29 @@ const CATALOG = [
   accessory('rear-delt-fly', 'Rear-delt DB fly', ['rear delts'], {
     loadType: 'dumbbell', repScheme: { sets: 3, repMin: 12, repMax: 15 },
   }),
+
+  accessory('leg-extension', 'Leg extension', ['quads']),
+  accessory('cable-curl', 'Cable curl', ['biceps']),
+  accessory('overhead-triceps-extension', 'Overhead cable triceps extension', ['triceps']),
+
+  // --- back care: light posterior-chain work, optional, two sets ------------
+  // Chosen to load the hips and the muscles along the spine without putting a
+  // heavy bar on it. A plate held or rested on you is "added weight".
+  accessory('back-extension', 'Back extension', ['lower back', 'glutes', 'hamstrings'], {
+    loadType: 'belt', addedWeight: true, bodyweightStart: true,
+    repScheme: { sets: 2, repMin: 12, repMax: 15 },
+  }),
+  accessory('cable-pull-through', 'Cable pull-through', ['glutes', 'hamstrings'], {
+    repScheme: { sets: 2, repMin: 12, repMax: 15 },
+  }),
+  accessory('glute-bridge', 'Glute bridge', ['glutes', 'hamstrings'], {
+    loadType: 'belt', addedWeight: true, bodyweightStart: true,
+    repScheme: { sets: 2, repMin: 12, repMax: 15 },
+  }),
+  accessory('bird-dog', 'Bird dog', ['lower back', 'core'], {
+    loadType: 'bodyweight', step: 0, unilateral: true,
+    repScheme: { sets: 2, repMin: 6, repMax: 8 },
+  }),
 ];
 
 // What each movement actually is, for the days you meet one you do not know.
@@ -136,7 +159,14 @@ const DESCRIPTIONS = {
   'hammer-curl': 'Dumbbells held like hammers, palms facing each other, and curled that way throughout. Works the forearm and the outside of the upper arm.',
   'face-pull': 'Rope on a high cable. Pull it toward your face, splitting your hands apart, and finish with your hands beside your ears and your elbows high.',
   'rear-delt-fly': 'Hinged forward with light dumbbells hanging. Sweep your arms out and back, like opening a pair of curtains.',
-  'pallof-press': 'Stand side-on to a cable set at chest height, hands clasped in front of your sternum. Press your hands straight out and hold for a beat. The cable is trying to twist you and your only job is to not let it. One side at a time, and it should feel like nothing is moving.'
+  'pallof-press': 'Stand side-on to a cable set at chest height, hands clasped in front of your sternum. Press your hands straight out and hold for a beat. The cable is trying to twist you and your only job is to not let it. One side at a time, and it should feel like nothing is moving.',
+  'leg-extension': 'Seated in the machine with the pad on the front of your ankles. Straighten your legs until your knees lock out, squeeze for a moment, then lower slowly. Both legs together.',
+  'cable-curl': 'Facing a low cable with a straight bar or rope. Curl it up to your chest with your elbows staying at your sides. The cable keeps the tension on at the bottom, where a dumbbell goes slack.',
+  'overhead-triceps-extension': 'Rope on a cable, facing away from the machine with the rope held behind your head and your elbows pointing forward. Straighten your arms out in front of and above you, then let your hands come back behind your head. Stretches the long part of the triceps that pushdowns miss.',
+  'back-extension': 'On the 45-degree bench, hips on the pad and ankles locked in. Lower your chest toward the floor, then raise it until your body is a straight line - stop there, do not arch backward past straight. Slow and controlled; hold a plate to your chest once 15 reps is easy.',
+  'cable-pull-through': 'Stand facing away from a low cable with the rope between your legs. Walk out a couple of steps, push your hips back until you feel your hamstrings stretch, then stand up by driving your hips forward and squeezing your glutes. A hip hinge with the load pulling backward instead of down on your spine.',
+  'glute-bridge': 'Lying on your back on the floor, knees bent and feet flat. Drive through your heels to lift your hips until your body is a straight line from knees to shoulders, squeeze for a second at the top, then lower. Rest a plate on your hips once 15 reps is easy.',
+  'bird-dog': 'On hands and knees, back flat. Reach one arm forward and the opposite leg back until both are level with your body, hold for five seconds without letting your hips tip, then bring them back. Alternate sides. Slow and deliberate: the point is keeping your lower back still.'
 };
 
 export const EXERCISES = CATALOG.map((e) => ({ ...e, description: DESCRIPTIONS[e.id] ?? '' }));
@@ -148,12 +178,22 @@ export function isCalibratedType(exercise) {
   return exercise?.type === 'main' || exercise?.type === 'secondary';
 }
 
-const slot = (id, dayIndex, role, current, options = []) => ({
+const slot = (id, dayIndex, role, current, options = [], o = {}) => ({
   id, dayIndex, role,
   rotatable: role !== 'main',
   options: [current, ...options],
   current,
+  optional: false,
+  ...o,
 });
+
+// The optional back-care slot, the last thing on each lifting day. Every day
+// offers the same four movements, starting from a different one: the gentler
+// two on the days that already hinge heavily (squat + RDL, deadlift).
+const BACK_CARE = ['back-extension', 'cable-pull-through', 'glute-bridge', 'bird-dog'];
+const backCare = (id, dayIndex, current) => slot(
+  id, dayIndex, 'accessory', current, BACK_CARE.filter((e) => e !== current), { optional: true },
+);
 
 export const SLOTS = [
   // Mon - Lower A
@@ -162,32 +202,46 @@ export const SLOTS = [
   slot('lowerA-acc1', 0, 'accessory', 'leg-curl', ['nordic-curl']),
   slot('lowerA-acc2', 0, 'accessory', 'standing-calf-raise', ['seated-calf-raise']),
   slot('lowerA-acc3', 0, 'accessory', 'pallof-press', ['ab-wheel', 'hanging-leg-raise', 'cable-crunch']),
+  slot('lowerA-acc4', 0, 'accessory', 'leg-extension', ['walking-lunge']),
+  backCare('lowerA-back', 0, 'bird-dog'),
   // Tue - Upper A
   slot('upperA-main', 1, 'main', 'bench-press'),
   slot('upperA-secondary', 1, 'secondary', 'barbell-row', ['pendlay-row', 'chest-supported-row']),
   slot('upperA-acc1', 1, 'accessory', 'db-lateral-raise', ['cable-lateral-raise']),
   slot('upperA-acc2', 1, 'accessory', 'cable-triceps-pushdown', ['dips', 'incline-db-press']),
+  slot('upperA-acc3', 1, 'accessory', 'cable-curl', ['hammer-curl']),
+  backCare('upperA-back', 1, 'back-extension'),
   // Thu - Lower B
   slot('lowerB-main', 3, 'main', 'deadlift'),
   slot('lowerB-secondary', 3, 'secondary', 'front-squat', ['bulgarian-split-squat', 'leg-press']),
   slot('lowerB-acc1', 3, 'accessory', 'hanging-leg-raise', ['ab-wheel']),
   slot('lowerB-acc2', 3, 'accessory', 'cable-crunch', ['walking-lunge']),
+  // Seated rather than standing: the standing machine loads the spine through
+  // the shoulder pads.
+  slot('lowerB-acc3', 3, 'accessory', 'seated-calf-raise', ['standing-calf-raise']),
+  backCare('lowerB-back', 3, 'glute-bridge'),
   // Fri - Upper B
   slot('upperB-main', 4, 'main', 'overhead-press'),
   slot('upperB-secondary', 4, 'secondary', 'weighted-chinup', ['weighted-pullup', 'lat-pulldown']),
   slot('upperB-acc1', 4, 'accessory', 'barbell-curl', ['incline-db-curl', 'hammer-curl']),
   slot('upperB-acc2', 4, 'accessory', 'face-pull', ['rear-delt-fly']),
+  slot('upperB-acc3', 4, 'accessory', 'overhead-triceps-extension', ['cable-triceps-pushdown']),
+  backCare('upperB-back', 4, 'cable-pull-through'),
 ];
+
+// New slots go on the END of a day, never in the middle: a session that was
+// started before an update is matched to the plan by position.
+const daySlots = (prefix) => SLOTS.filter((s) => s.id.startsWith(`${prefix}-`)).map((s) => s.id);
 
 export const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 // Monday is always day 1.
 export const TEMPLATE = [
-  { dayIndex: 0, name: 'Lower A', kind: 'lift', slots: ['lowerA-main', 'lowerA-secondary', 'lowerA-acc1', 'lowerA-acc2', 'lowerA-acc3'] },
-  { dayIndex: 1, name: 'Upper A', kind: 'lift', slots: ['upperA-main', 'upperA-secondary', 'upperA-acc1', 'upperA-acc2'] },
+  { dayIndex: 0, name: 'Lower A', kind: 'lift', slots: daySlots('lowerA') },
+  { dayIndex: 1, name: 'Upper A', kind: 'lift', slots: daySlots('upperA') },
   { dayIndex: 2, name: 'Zone 2 run', kind: 'z2', duration: 40 },
-  { dayIndex: 3, name: 'Lower B', kind: 'lift', slots: ['lowerB-main', 'lowerB-secondary', 'lowerB-acc1', 'lowerB-acc2'] },
-  { dayIndex: 4, name: 'Upper B', kind: 'lift', slots: ['upperB-main', 'upperB-secondary', 'upperB-acc1', 'upperB-acc2'] },
+  { dayIndex: 3, name: 'Lower B', kind: 'lift', slots: daySlots('lowerB') },
+  { dayIndex: 4, name: 'Upper B', kind: 'lift', slots: daySlots('upperB') },
   { dayIndex: 5, name: 'Zone 5 run', kind: 'z5' },
   { dayIndex: 6, name: 'Zone 2 run', kind: 'z2', duration: 40, sundayWalkOption: true },
 ];

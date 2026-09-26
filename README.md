@@ -8,6 +8,8 @@ installs to an iPhone home screen, works offline, keeps its data in `localStorag
 - Heavy 5x5-style work on the four main barbell lifts, with linear progression.
 - A 5RM calibration ramp the first time you meet a lift; every number is overridable.
 - Calendar-anchored: Monday is always Day 1. A missed day is missed, not made up.
+- Every lifting day ends with one optional back-care exercise (back extension, cable
+  pull-through, glute bridge or bird dog), costed separately from the 45-minute budget.
 - Automatic 10% deload after three consecutive fails, and a deload week every 7th week.
 
 ## Run it locally

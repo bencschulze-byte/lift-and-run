@@ -52,7 +52,9 @@ function tileFor(ctx, tile, today) {
 function rotationPrompt(ctx, today) {
   const doc = ctx.doc;
   const effectiveFrom = addDays(mondayOf(today), 7);
-  const rotatable = Object.values(doc.slots).filter((s) => s.rotatable && s.options.length > 1);
+  // In the order the week runs them, not the order they were stored in.
+  const rotatable = doc.template.flatMap((d) => d.slots ?? []).map((id) => doc.slots[id])
+    .filter((s) => s?.rotatable && s.options.length > 1);
 
   return h('section', { class: 'card' },
     h('h2', {}, 'Rotate for next block?'),
@@ -77,7 +79,8 @@ function slotLabel(slot) {
   const day = slot.id.startsWith('lowerA') ? 'Lower A'
     : slot.id.startsWith('upperA') ? 'Upper A'
       : slot.id.startsWith('lowerB') ? 'Lower B' : 'Upper B';
+  const acc = slot.id.match(/acc(\d)$/);
   const role = slot.id.endsWith('secondary') ? 'secondary'
-    : slot.id.endsWith('acc1') ? 'accessory 1' : 'accessory 2';
+    : slot.optional ? 'back care' : `accessory ${acc?.[1] ?? ''}`.trim();
   return `${day} ${role}`;
 }
