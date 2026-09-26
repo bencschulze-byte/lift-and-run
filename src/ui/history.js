@@ -133,7 +133,7 @@ function sessionList(ctx, sessions) {
 }
 
 function describe(doc, session) {
-  if (session.kind === 'z2') return session.cardio?.duration ? `Zone 2, ${session.cardio.duration} min` : 'Zone 2 run';
+  if (session.kind === 'z2') return session.cardio?.duration ? `Zone 2, ${session.cardio.duration} min` : 'Zone 2';
   if (session.kind === 'z5') return `Zone 5, ${session.cardio?.intervalsCompleted ?? 0} intervals`;
   const names = (session.exercises ?? [])
     .filter((e) => (e.sets ?? []).length)

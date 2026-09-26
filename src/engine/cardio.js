@@ -73,13 +73,13 @@ export function z2Session({ sundayWalk = false, isSunday = false, deloadWeek = f
     duration: 40,
     totalMinutes: 40,
     deloadWeek,
-    label: walk ? 'Easy walk' : 'Zone 2 run',
+    label: walk ? 'Easy walk' : 'Zone 2 cardio',
   };
 }
 
-// During a deload week Saturday becomes a 30-minute Zone 2 run.
+// During a deload week Saturday becomes 30 minutes of easy Zone 2.
 export function deloadSaturdaySession() {
-  return { kind: 'z2', walk: false, duration: 30, totalMinutes: 30, deloadWeek: true, label: 'Zone 2 run (deload)' };
+  return { kind: 'z2', walk: false, duration: 30, totalMinutes: 30, deloadWeek: true, label: 'Zone 2 cardio (deload)' };
 }
 
 // Heart-rate guidance, if we have anything to go on.

@@ -239,11 +239,11 @@ export const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 export const TEMPLATE = [
   { dayIndex: 0, name: 'Lower A', kind: 'lift', slots: daySlots('lowerA') },
   { dayIndex: 1, name: 'Upper A', kind: 'lift', slots: daySlots('upperA') },
-  { dayIndex: 2, name: 'Zone 2 run', kind: 'z2', duration: 40 },
+  { dayIndex: 2, name: 'Zone 2 cardio', kind: 'z2', duration: 40 },
   { dayIndex: 3, name: 'Lower B', kind: 'lift', slots: daySlots('lowerB') },
   { dayIndex: 4, name: 'Upper B', kind: 'lift', slots: daySlots('upperB') },
   { dayIndex: 5, name: 'Zone 5 run', kind: 'z5' },
-  { dayIndex: 6, name: 'Zone 2 run', kind: 'z2', duration: 40, sundayWalkOption: true },
+  { dayIndex: 6, name: 'Zone 2 cardio', kind: 'z2', duration: 40, sundayWalkOption: true },
 ];
 
 export const SCHEMA_VERSION = 1;

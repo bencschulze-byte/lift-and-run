@@ -73,3 +73,8 @@ test('heart rate falls back to 220 minus age, then to effort only', () => {
   assert.deepEqual(hrRange('z2', { age: 40 }), { low: 108, high: 126, max: 180 });
   assert.deepEqual(hrRange('z5', { age: 40 }), { low: 162, high: 180, max: 180 });
 });
+
+test('zone 2 is cardio of any kind, not specifically a run', () => {
+  assert.equal(z2Session().label, 'Zone 2 cardio');
+  assert.equal(z2Session({ sundayWalk: true, isSunday: true }).label, 'Easy walk');
+});

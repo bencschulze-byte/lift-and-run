@@ -1,7 +1,8 @@
 # Lift & Run
 
-A single-user daily workout app: four 45-minute lifting days, two Zone 2 runs and one
-Zone 5 interval session a week. Static site, no build step, no runtime dependencies. It
+A single-user daily workout app: four 45-minute lifting days, two Zone 2 cardio sessions
+(run, stair stepper or bike, logged by time) and one Zone 5 interval session a week.
+Static site, no build step, no runtime dependencies. It
 installs to an iPhone home screen, works offline, keeps its data in `localStorage`, and
 (once connected) syncs to a private GitHub Gist.
 

@@ -15,16 +15,19 @@ function guidance(ctx, zone, text) {
 }
 
 function renderZ2(ctx, plan) {
-  ctx.setTitle(plan.label ?? 'Zone 2 run');
+  ctx.setTitle(plan.label ?? 'Zone 2 cardio');
+  // Any machine or none: a run, the stair stepper, a bike. Time is the only
+  // measure that means the same across all of them, so there is no distance.
   const form = logForm(ctx, plan, {
     duration: plan.duration,
-    fields: ['duration', 'distance', 'avgHR', 'rpe', 'notes'],
+    durationLabel: 'Total time (min)',
+    fields: ['duration', 'avgHR', 'rpe', 'notes'],
   });
   return h('div', { class: 'screen-body' },
     h('section', { class: 'card' },
-      h('h2', {}, plan.walk ? 'Easy walk' : 'Zone 2 run'),
+      h('h2', {}, plan.walk ? 'Easy walk' : 'Zone 2 cardio'),
       h('p', { class: 'big' }, `${plan.duration} min`),
-      guidance(ctx, 'z2', 'Conversational pace: you should be able to breathe through your nose and hold a sentence.'),
+      guidance(ctx, 'z2', 'Run, stair stepper, bike - whatever you like. Keep it conversational: you should be able to breathe through your nose and hold a sentence.'),
       plan.deloadWeek && h('span', { class: 'badge warn' }, 'Deload week'),
     ),
     form,
@@ -91,20 +94,22 @@ function renderZ5(ctx, plan) {
   );
 }
 
-function logForm(ctx, plan, { fields, duration, intervals, getIntervals }) {
+function logForm(ctx, plan, { fields, duration, durationLabel = 'Duration (min)', intervals, getIntervals }) {
   const inputs = {};
   const rows = [];
 
   if (fields.includes('duration')) {
     inputs.duration = numberInput(duration ?? plan.duration ?? 40, '1');
-    rows.push(h('label', {}, 'Duration (min)', inputs.duration));
+    rows.push(h('label', {}, durationLabel, inputs.duration));
   }
   if (fields.includes('intervalsCompleted')) {
     inputs.intervalsCompleted = numberInput(intervals ?? 0, '1');
     rows.push(h('label', {}, 'Intervals completed', inputs.intervalsCompleted));
   }
-  inputs.distance = numberInput('', '0.01');
-  rows.push(h('label', {}, 'Distance (miles, optional)', inputs.distance));
+  if (fields.includes('distance')) {
+    inputs.distance = numberInput('', '0.01');
+    rows.push(h('label', {}, 'Distance (miles, optional)', inputs.distance));
+  }
   inputs.avgHR = numberInput('', '1');
   rows.push(h('label', {}, 'Average HR (optional)', inputs.avgHR));
 
@@ -132,7 +137,7 @@ function logForm(ctx, plan, { fields, duration, intervals, getIntervals }) {
         const session = startSession(plan);
         session.cardio = {
           duration: num(inputs.duration) ?? plan.duration ?? plan.totalMinutes,
-          distance: num(inputs.distance),
+          distance: inputs.distance ? num(inputs.distance) : null,
           avgHR: num(inputs.avgHR),
           intervalsCompleted: fields.includes('intervalsCompleted')
             ? (num(inputs.intervalsCompleted) ?? getIntervals?.() ?? 0)
