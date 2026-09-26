@@ -27,7 +27,9 @@ function tileFor(ctx, tile, today) {
   const el = h('div', { class: `card tile${tile.isToday ? ' today' : ''}${tile.done ? ' done' : ''}` },
     h('span', { class: 'day' }, tile.dayName),
     h('span', { class: 'name' }, tile.name),
-    h('span', { class: 'muted' }, tile.done ? 'Done' : fmtDate(tile.date)),
+    h('span', { class: 'muted' }, !tile.done ? fmtDate(tile.date)
+      : tile.doneOn === tile.date ? 'Done' : `Done ${fmtDate(tile.doneOn)}`),
+    tile.doingToday && h('span', { class: 'badge accent' }, `Today: ${tile.doingToday}`),
   );
   if (!tile.isToday) {
     append(el, h('button', {

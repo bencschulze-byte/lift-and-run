@@ -5,6 +5,7 @@ import {
 import { planFor, BUDGET_MIN } from '../engine/template.js';
 import { startSession, finishSession } from '../session.js';
 import { renderCardio } from './cardio.js';
+import { swapPanel } from './swap.js';
 
 export function renderToday(ctx) {
   const doc = ctx.doc;
@@ -25,6 +26,7 @@ export function renderToday(ctx) {
     ...plan.items.map((item, i) => card(ctx, plan, session, item, i, overBudget)),
     supersetNote(plan),
     finishRow(ctx, plan, session),
+    !session && swapPanel(ctx, plan),
   );
 }
 

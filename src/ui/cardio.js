@@ -3,6 +3,7 @@ import { h, fmtClock, toast } from './dom.js';
 import { hrRange } from '../engine/cardio.js';
 import { startSession, finishSession } from '../session.js';
 import { createIntervalTimer } from './timer.js';
+import { swapPanel } from './swap.js';
 
 export function renderCardio(ctx, plan) {
   return plan.kind === 'z5' ? renderZ5(ctx, plan) : renderZ2(ctx, plan);
@@ -27,6 +28,7 @@ function renderZ2(ctx, plan) {
       plan.deloadWeek && h('span', { class: 'badge warn' }, 'Deload week'),
     ),
     form,
+    swapPanel(ctx, plan),
   );
 }
 
@@ -85,6 +87,7 @@ function renderZ5(ctx, plan) {
       fields: ['intervalsCompleted', 'distance', 'avgHR', 'rpe', 'notes'],
       getIntervals: () => timer.intervalsDone(),
     }),
+    swapPanel(ctx, plan),
   );
 }
 

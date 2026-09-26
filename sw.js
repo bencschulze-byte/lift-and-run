@@ -5,7 +5,7 @@
 // files. Run `node tools/bump-cache.mjs` before pushing - it bumps this
 // number and rewrites SHELL from what is actually on disk.
 
-const CACHE_VERSION = 'v9';
+const CACHE_VERSION = 'v10';
 const CACHE = `lift-and-run-${CACHE_VERSION}`;
 
 const SHELL = [
@@ -34,6 +34,7 @@ const SHELL = [
   'src/ui/exercise.js',
   'src/ui/history.js',
   'src/ui/settings.js',
+  'src/ui/swap.js',
   'src/ui/sync-panel.js',
   'src/ui/timer.js',
   'src/ui/today.js',

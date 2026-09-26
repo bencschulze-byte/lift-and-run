@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { planFor, planForDayIndex, weekOverview, BUDGET_MIN } from '../src/engine/template.js';
+import { planFor, planForDayIndex, weekOverview, missedThisWeek, BUDGET_MIN } from '../src/engine/template.js';
 import { createProgramDocument } from '../src/engine/defaults.js';
 
 const MON = '2026-09-21';
@@ -202,4 +202,27 @@ test('every exercise explains itself', () => {
   const d = doc();
   const missing = Object.values(d.exercises).filter((e) => !e.description || e.description.length < 40);
   assert.deepEqual(missing.map((e) => e.id), [], 'an exercise with no usable description');
+});
+
+const finished = (date, dayIndex) => ({ id: `${date}-${dayIndex}`, date, dayIndex, kind: 'lift', finishedAt: `${date}T18:00:00Z` });
+
+test('a workout made up on a later day counts for its own day', () => {
+  // Saturday's intervals were missed and run on Sunday instead.
+  const d = doc({ sessions: [finished(SUN, 5)], swaps: { [SUN]: 5 } });
+  const week = weekOverview(d, SUN);
+  assert.equal(week[5].done, true, 'Saturday is done');
+  assert.equal(week[5].doneOn, SUN, 'on Sunday');
+  assert.equal(week[6].done, false, 'and Sunday\'s own run is not');
+  assert.equal(week[6].doingToday, 'Zone 5 run');
+});
+
+test('the missed list offers earlier undone days, oldest first', () => {
+  const d = doc({ sessions: [finished(MON, 0), finished(WED, 2), finished(THU, 3)] });
+  assert.deepEqual(missedThisWeek(d, SAT).map((t) => t.dayName), ['Tue', 'Fri']);
+  assert.deepEqual(missedThisWeek(d, MON), [], 'nothing is missed on a Monday');
+});
+
+test('a day already swapped in is not offered again, and last week does not count', () => {
+  const d = doc({ sessions: [finished('2026-09-15', 1)], swaps: { [WED]: 1 } });
+  assert.deepEqual(missedThisWeek(d, WED).map((t) => t.dayName), ['Mon'], 'Tuesday is what today is running');
 });

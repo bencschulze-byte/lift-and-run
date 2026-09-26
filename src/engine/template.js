@@ -162,25 +162,41 @@ export function estimateMinutes(items = []) {
   return { total: round1(total), optional: round1(optional), warmup: GENERAL_WARMUP_MIN, items: perItem };
 }
 
-// Seven tiles for the Week screen.
+// Seven tiles for the Week screen. A workout is done when it was finished on
+// any day of this week, not only on its own: Saturday's intervals run on
+// Sunday still count as Saturday's.
 export function weekOverview(doc, date = new Date()) {
   const iso = toISODate(date);
   const monday = mondayOf(iso);
-  const sessions = doc?.sessions ?? [];
+  const sunday = addDays(monday, 6);
+  const finished = (doc?.sessions ?? []).filter((s) => s.finishedAt && s.date >= monday && s.date <= sunday);
+  const todayIndex = effectiveDayIndex(doc, iso);
   return templateFor(doc).map((day, i) => {
     const dayISO = addDays(monday, i);
-    const done = sessions.filter((s) => s.date === dayISO && s.finishedAt);
+    const done = finished.find((s) => s.dayIndex === i);
+    const isToday = dayISO === iso;
     return {
       dayIndex: i,
       dayName: DAY_NAMES[i],
       date: dayISO,
       name: day.name,
       kind: day.kind,
-      done: done.length > 0,
-      isToday: dayISO === iso,
+      done: !!done,
+      doneOn: done?.date ?? null,
+      isToday,
+      // What today is actually running, when it is not its own workout.
+      doingToday: isToday && todayIndex !== i ? templateFor(doc)[todayIndex].name : null,
       deloadWeek: isDeloadWeek(doc, dayISO),
     };
   });
+}
+
+// Earlier days this week whose workout has not been done, oldest first:
+// the ones you might want to make up today.
+export function missedThisWeek(doc, date = new Date()) {
+  const iso = toISODate(date);
+  const todayIndex = effectiveDayIndex(doc, iso);
+  return weekOverview(doc, iso).filter((t) => t.date < iso && !t.done && t.dayIndex !== todayIndex);
 }
 
 function round1(n) {
