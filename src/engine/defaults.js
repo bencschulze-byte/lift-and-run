@@ -229,8 +229,6 @@ export const SLOTS = [
   backCare('upperB-back', 4, 'cable-pull-through'),
 ];
 
-// New slots go on the END of a day, never in the middle: a session that was
-// started before an update is matched to the plan by position.
 const daySlots = (prefix) => SLOTS.filter((s) => s.id.startsWith(`${prefix}-`)).map((s) => s.id);
 
 export const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];

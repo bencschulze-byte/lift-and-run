@@ -72,7 +72,7 @@ export function planFor(doc, date = new Date()) {
   }
 
   const items = day.slots.map((slotId) => buildItem(doc, slotsFor(doc)[slotId], { deload, settings }));
-  const estimate = estimateMinutes(items);
+  const estimate = personalise(estimateMinutes(items), personalPace(doc));
   return { ...base, items, estimate, overBudget: estimate.total > BUDGET_MIN };
 }
 
@@ -160,6 +160,73 @@ export function estimateMinutes(items = []) {
   }
 
   return { total: round1(total), optional: round1(optional), warmup: GENERAL_WARMUP_MIN, items: perItem };
+}
+
+// --- learning from the clock ----------------------------------------------
+// The time model is a guess. Every finished lifting session says how long the
+// work it logged really took, so compare the two and scale future estimates
+// by the typical ratio. Needs a few sessions first; until then, the guess.
+
+export const PACE_MIN_SESSIONS = 3;
+const PACE_RECENT = 8;
+
+// What the model would have said for the work a session actually logged.
+export function modelledMinutes(doc, session) {
+  const items = [];
+  for (const entry of session.exercises ?? []) {
+    const sets = entry.sets ?? [];
+    const working = sets.filter((s) => !s.ramp).length;
+    if (!working) continue;
+    const exercise = exerciseFor(doc, entry.exerciseId);
+    if (!exercise) continue;
+    items.push({
+      slotId: entry.slotId,
+      role: entry.role,
+      exercise,
+      optional: !!slotsFor(doc)[entry.slotId]?.optional,
+      scheme: { ...(entry.scheme ?? {}), sets: working },
+      ramp: sets.filter((s) => s.ramp),
+      restSeconds: restSecondsFor(entry.role),
+    });
+  }
+  if (!items.length) return null;
+  const e = estimateMinutes(items);
+  return e.total + e.optional; // optional work that was done took time too
+}
+
+// Median of actual / modelled over recent finished lifting sessions, or null.
+// Calibration days and sessions left open for hours are not typical; skip them.
+export function personalPace(doc) {
+  const ratios = [];
+  const sessions = [...(doc?.sessions ?? [])]
+    .filter((s) => s.kind === 'lift' && s.startedAt && s.finishedAt)
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
+  for (const s of sessions) {
+    if ((s.exercises ?? []).some((e) => e.result === 'calibration')) continue;
+    const actual = (new Date(s.finishedAt) - new Date(s.startedAt)) / 60000;
+    const modelled = modelledMinutes(doc, s);
+    if (!modelled || !(actual >= 10 && actual <= 120)) continue;
+    const ratio = actual / modelled;
+    if (ratio < 0.4 || ratio > 1.6) continue;
+    ratios.push(ratio);
+    if (ratios.length === PACE_RECENT) break;
+  }
+  if (ratios.length < PACE_MIN_SESSIONS) return null;
+  ratios.sort((a, b) => a - b);
+  const mid = Math.floor(ratios.length / 2);
+  const median = ratios.length % 2 ? ratios[mid] : (ratios[mid - 1] + ratios[mid]) / 2;
+  return { factor: Math.round(median * 100) / 100, sessions: ratios.length };
+}
+
+function personalise(estimate, pace) {
+  if (!pace) return estimate;
+  return {
+    ...estimate,
+    modelTotal: estimate.total,
+    total: round1(estimate.total * pace.factor),
+    optional: round1(estimate.optional * pace.factor),
+    pace,
+  };
 }
 
 // Seven tiles for the Week screen. A workout is done when it was finished on

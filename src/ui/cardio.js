@@ -146,7 +146,7 @@ function logForm(ctx, plan, { fields, duration, durationLabel = 'Duration (min)'
         };
         session.notes = notes.value;
         const { doc, summary } = finishSession(ctx.doc, session);
-        ctx.storage.save({ ...doc, finishedSummary: { summary, date: plan.date } });
+        ctx.storage.save({ ...doc, finishedSummary: { sessionId: session.id, summary, date: plan.date } });
         ctx.wakeLock.release();
         ctx.refresh();
       },

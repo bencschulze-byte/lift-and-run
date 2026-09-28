@@ -17,7 +17,7 @@ installs to an iPhone home screen, works offline, keeps its data in `localStorag
 
 ```
 node tools/serve.mjs          # http://localhost:8080
-node --test                   # the whole test suite
+node --test                   # the whole test suite (screen tests need Chrome)
 ```
 
 Nothing to install. Node 18+ for the test runner and the tools.
@@ -46,10 +46,10 @@ its own path. `.nojekyll` is there so GitHub Pages serves everything as-is.
 3. Open it from the home screen. It runs full screen with no browser chrome, and after
    one online visit it loads with airplane mode on.
 
-To get an update after a deploy, open the app **twice**. The first launch notices the new
-service worker and downloads the new files in the background; the second launch runs them.
-That is normal service worker behaviour, not a bug. If it is still stubborn, remove it from
-the home screen and add it again.
+After a deploy, open the app (or switch back to it). It fetches the new version in the
+background and shows a **New version ready - tap to reload** bar; tap it when you are not
+mid-set. If the bar never comes, closing and reopening the app twice does the same thing,
+and removing it from the home screen and adding it again is the last resort.
 
 ## Gist sync
 

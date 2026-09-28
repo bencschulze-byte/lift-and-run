@@ -38,18 +38,37 @@ export function startSession(plan, now = new Date()) {
     };
   }
 
+  return { ...base, exercises: plan.items.map(blankEntry) };
+}
+
+function blankEntry(item) {
   return {
-    ...base,
-    exercises: plan.items.map((item) => ({
-      exerciseId: item.exerciseId,
-      slotId: item.slotId,
-      role: item.role,
-      prescribedWeight: item.weight,
-      scheme: item.scheme,
-      sets: [],
-      result: null, // set to 'calibration' by the wizard, otherwise by the finish flow
-    })),
+    exerciseId: item.exerciseId,
+    slotId: item.slotId,
+    role: item.role,
+    prescribedWeight: item.weight,
+    scheme: item.scheme,
+    sets: [],
+    result: null, // set to 'calibration' by the wizard, otherwise by the finish flow
   };
+}
+
+// The logged entry for one item of the plan. Matched on slot and exercise,
+// never on position, so a slot added by an update - or an exercise swapped
+// mid-session - can never have its sets filed under the wrong lift.
+export function entryFor(session, item) {
+  return session?.exercises?.find((e) => e.slotId === item.slotId && e.exerciseId === item.exerciseId) ?? null;
+}
+
+// The same, creating the entry if this session has none for the item yet.
+export function ensureEntry(session, item) {
+  let entry = entryFor(session, item);
+  if (!entry) {
+    entry = blankEntry(item);
+    session.exercises = [...(session.exercises ?? []), entry];
+  }
+  entry.sets = entry.sets ?? [];
+  return entry;
 }
 
 // Store the result of the calibration wizard on the lift.

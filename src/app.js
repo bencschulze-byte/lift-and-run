@@ -141,7 +141,24 @@ if (sync.connected()) sync.syncNow();
 // The service worker is registered only where it exists (it is absent when
 // running from a plain file:// copy).
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+  window.addEventListener('load', async () => {
+    const registration = await navigator.serviceWorker.register('sw.js').catch(() => null);
+    // iOS keeps a home-screen app alive for days; look for a new version
+    // whenever it comes back to the front, not just on a cold start.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') registration?.update().catch(() => {});
+    });
+  });
+
+  // A new version has taken over but this page is still running the old
+  // code. Offer the reload rather than doing it: mid-set, a reload would
+  // throw away the rest timer.
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || document.querySelector('.update-bar')) return;
+    document.body.append(h('button', {
+      class: 'update-bar',
+      onclick: () => location.reload(),
+    }, 'New version ready - tap to reload'));
   });
 }

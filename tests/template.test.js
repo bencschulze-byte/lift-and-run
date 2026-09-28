@@ -226,3 +226,44 @@ test('a day already swapped in is not offered again, and last week does not coun
   const d = doc({ sessions: [finished('2026-09-15', 1)], swaps: { [WED]: 1 } });
   assert.deepEqual(missedThisWeek(d, WED).map((t) => t.dayName), ['Mon'], 'Tuesday is what today is running');
 });
+
+// A finished Lower A session that took `minutes`, with every set logged.
+function timedSession(d, date, minutes) {
+  const plan = planFor({ ...d, sessions: [] }, MON);
+  const start = new Date(`${date}T17:00:00Z`);
+  return {
+    id: `t-${date}`, date, dayIndex: 0, kind: 'lift',
+    startedAt: start.toISOString(),
+    finishedAt: new Date(start.getTime() + minutes * 60000).toISOString(),
+    exercises: plan.items.filter((i) => !i.optional).map((i) => ({
+      exerciseId: i.exerciseId, slotId: i.slotId, role: i.role, scheme: i.scheme, prescribedWeight: i.weight,
+      sets: [...i.ramp.map((r, n) => ({ ...r, index: n })), ...Array.from({ length: i.scheme.sets }, () => ({ weight: i.weight, reps: 5 }))],
+    })),
+  };
+}
+
+test('the estimate learns from how long sessions really take', () => {
+  const d = calibrated(doc(), { 'back-squat': 225, 'romanian-deadlift': 185 });
+  const model = planFor(d, MON).estimate.total;
+  assert.equal(planFor(d, MON).estimate.pace, undefined, 'no history: the plain model');
+
+  d.sessions = [timedSession(d, '2026-09-07', model * 0.8), timedSession(d, '2026-09-14', model * 0.8)];
+  assert.equal(planFor(d, MON).estimate.pace, undefined, 'two sessions is not enough');
+
+  d.sessions.push(timedSession(d, '2026-09-21', model * 0.8));
+  const learned = planFor(d, MON).estimate;
+  assert.equal(learned.pace.sessions, 3);
+  assert.equal(learned.pace.factor, 0.8);
+  assert.ok(Math.abs(learned.total - model * 0.8) < 0.2, `${learned.total} vs ${model * 0.8}`);
+  assert.equal(learned.modelTotal, model);
+});
+
+test('a session left open for hours does not teach the estimate anything', () => {
+  const d = calibrated(doc(), { 'back-squat': 225, 'romanian-deadlift': 185 });
+  const model = planFor(d, MON).estimate.total;
+  d.sessions = [
+    timedSession(d, '2026-09-07', model * 0.8), timedSession(d, '2026-09-14', model * 0.8),
+    timedSession(d, '2026-09-21', 300),
+  ];
+  assert.equal(planFor(d, MON).estimate.pace, undefined);
+});

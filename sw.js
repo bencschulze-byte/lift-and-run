@@ -5,7 +5,7 @@
 // files. Run `node tools/bump-cache.mjs` before pushing - it bumps this
 // number and rewrites SHELL from what is actually on disk.
 
-const CACHE_VERSION = 'v11';
+const CACHE_VERSION = 'v13';
 const CACHE = `lift-and-run-${CACHE_VERSION}`;
 
 const SHELL = [
@@ -17,6 +17,7 @@ const SHELL = [
   'icons/icon-192.png',
   'icons/icon-512.png',
   'src/app.js',
+  'src/engine/back.js',
   'src/engine/calibration.js',
   'src/engine/cardio.js',
   'src/engine/dates.js',

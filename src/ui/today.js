@@ -3,9 +3,10 @@ import {
   h, append, bigLoad, howTo, fmtLoad, fmtScheme, fmtPlates, fmtNumber, fmtMinutes, onLongPress, toast,
 } from './dom.js';
 import { planFor, BUDGET_MIN } from '../engine/template.js';
-import { startSession, finishSession } from '../session.js';
+import { startSession, finishSession, entryFor, ensureEntry } from '../session.js';
 import { renderCardio } from './cardio.js';
 import { swapPanel } from './swap.js';
+import { BACK_RATINGS, rateBack } from '../engine/back.js';
 
 export function renderToday(ctx) {
   const doc = ctx.doc;
@@ -23,7 +24,7 @@ export function renderToday(ctx) {
 
   return h('div', { class: 'screen-body' },
     header(ctx, plan, session),
-    ...plan.items.map((item, i) => card(ctx, plan, session, item, i, overBudget)),
+    ...plan.items.map((item) => card(ctx, plan, session, item, overBudget)),
     supersetNote(plan),
     finishRow(ctx, plan, session),
     !session && swapPanel(ctx, plan),
@@ -51,11 +52,13 @@ function header(ctx, plan, session) {
     }, 'Start session'),
     plan.overBudget && h('p', { class: 'muted' },
       'Estimated past 45 min. If the clock gets there, the accessories become optional.'),
+    plan.estimate.pace && h('p', { class: 'muted' },
+      `Times based on your last ${plan.estimate.pace.sessions} sessions.`),
   );
 }
 
-function card(ctx, plan, session, item, index, overBudget) {
-  const entry = session?.exercises?.[index] ?? null;
+function card(ctx, plan, session, item, overBudget) {
+  const entry = entryFor(session, item);
   const ex = item.exercise;
   const optional = item.optional || (overBudget && item.role === 'accessory');
   const eyebrow = item.optional ? 'back care · optional'
@@ -109,9 +112,9 @@ function card(ctx, plan, session, item, index, overBudget) {
   );
 
   const rows = h('div', { class: 'sets' });
-  (item.ramp ?? []).forEach((set, i) => rows.append(setRow(ctx, plan, index, item, set, i, true)));
+  (item.ramp ?? []).forEach((set, i) => rows.append(setRow(ctx, plan, item, set, i, true)));
   for (let i = 0; i < item.scheme.sets; i++) {
-    rows.append(setRow(ctx, plan, index, item, null, i, false));
+    rows.append(setRow(ctx, plan, item, null, i, false));
   }
   if (ex.unilateral) rows.append(h('p', { class: 'muted' }, 'Each set is both sides - log it once you have done both.'));
   append(el, rows, progressBar(logged.length, item.scheme.sets), howTo(ex));
@@ -128,9 +131,8 @@ function progressBar(done, total) {
   );
 }
 
-function setRow(ctx, plan, itemIndex, item, rampSet, i, isRamp) {
-  const session = activeSession(ctx.doc, plan);
-  const entry = session?.exercises?.[itemIndex];
+function setRow(ctx, plan, item, rampSet, i, isRamp) {
+  const entry = entryFor(activeSession(ctx.doc, plan), item);
   const all = entry?.sets ?? [];
   const stored = isRamp
     ? all.find((s) => s.ramp && s.index === i)
@@ -145,17 +147,17 @@ function setRow(ctx, plan, itemIndex, item, rampSet, i, isRamp) {
   const state = !stored ? '' : (Number(stored.reps) >= enough ? ' logged' : ' short');
 
   const justLogged = lastLogged
-    && lastLogged.itemIndex === itemIndex && lastLogged.i === i && lastLogged.isRamp === isRamp;
+    && lastLogged.slotId === item.slotId && lastLogged.i === i && lastLogged.isRamp === isRamp;
   const button = h('button', { class: `tapset${state}${justLogged ? ' just-logged' : ''}` },
     `${reps}`,
     stored && state === ' logged' ? h('span', { class: 'tick' }, '✓') : null,
   );
   button.addEventListener('click', () => {
     if (button.consumedLongPress?.()) return;
-    if (!stored) logSet(ctx, plan, itemIndex, i, isRamp, { weight, reps: prescribedReps });
-    else cycleReps(ctx, plan, itemIndex, i, isRamp, stored, prescribedReps);
+    if (!stored) logSet(ctx, plan, item, i, isRamp, { weight, reps: prescribedReps });
+    else cycleReps(ctx, plan, item, i, isRamp, stored, prescribedReps);
   });
-  onLongPress(button, () => openEditor(ctx, plan, itemIndex, i, isRamp, { weight, reps }));
+  onLongPress(button, () => openEditor(ctx, plan, item, i, isRamp, { weight, reps }));
 
   return h('div', { class: `setrow${isRamp ? ' ramp' : ''}` },
     h('span', { class: 'idx' }, isRamp ? 'W' : `${i + 1}`),
@@ -164,7 +166,7 @@ function setRow(ctx, plan, itemIndex, item, rampSet, i, isRamp) {
   );
 }
 
-function openEditor(ctx, plan, itemIndex, i, isRamp, current) {
+function openEditor(ctx, plan, item, i, isRamp, current) {
   const weight = h('input', { type: 'number', inputmode: 'decimal', step: '0.5', value: current.weight ?? 0 });
   const reps = h('input', { type: 'number', inputmode: 'numeric', step: '1', value: current.reps ?? 0 });
   const dialog = h('div', { class: 'card' },
@@ -175,7 +177,7 @@ function openEditor(ctx, plan, itemIndex, i, isRamp, current) {
       h('button', {
         class: 'primary',
         onclick: () => {
-          logSet(ctx, plan, itemIndex, i, isRamp, { weight: Number(weight.value), reps: Number(reps.value) });
+          logSet(ctx, plan, item, i, isRamp, { weight: Number(weight.value), reps: Number(reps.value) });
         },
       }, 'Save'),
     ),
@@ -189,17 +191,12 @@ function openEditor(ctx, plan, itemIndex, i, isRamp, current) {
 // Which set just landed, so the re-render can animate that one button.
 let lastLogged = null;
 
-function logSet(ctx, plan, itemIndex, i, isRamp, { weight, reps }) {
-  const item = plan.items[itemIndex];
-  lastLogged = { itemIndex, i, isRamp };
+function logSet(ctx, plan, item, i, isRamp, { weight, reps }) {
+  lastLogged = { slotId: item.slotId, i, isRamp };
   setTimeout(() => { lastLogged = null; }, 400);
   ctx.update((d) => {
     d.activeSession = d.activeSession ?? startSession(plan);
-    // A session started before an update added slots has no entries for them yet.
-    const blank = startSession(plan).exercises;
-    for (let i = d.activeSession.exercises.length; i < blank.length; i++) d.activeSession.exercises.push(blank[i]);
-    const entry = d.activeSession.exercises[itemIndex];
-    entry.sets = entry.sets ?? [];
+    const entry = ensureEntry(d.activeSession, item);
     if (isRamp) {
       const existing = entry.sets.find((s) => s.ramp && s.index === i);
       if (existing) Object.assign(existing, { weight, reps });
@@ -215,10 +212,10 @@ function logSet(ctx, plan, itemIndex, i, isRamp, { weight, reps }) {
   ctx.wakeLock.acquire();
 }
 
-function cycleReps(ctx, plan, itemIndex, i, isRamp, stored, prescribed) {
+function cycleReps(ctx, plan, item, i, isRamp, stored, prescribed) {
   const next = Number(stored.reps) <= 0 ? prescribed : Number(stored.reps) - 1;
   ctx.update((d) => {
-    const entry = d.activeSession.exercises[itemIndex];
+    const entry = ensureEntry(d.activeSession, item);
     const target = isRamp
       ? entry.sets.find((s) => s.ramp && s.index === i)
       : entry.sets.filter((s) => !s.ramp)[i];
@@ -284,14 +281,17 @@ function finishRow(ctx, plan, session) {
 
 function renderSummary(ctx, finished) {
   ctx.setTitle('Done');
+  const doc = ctx.doc;
+  const lifts = finished.summary.filter((line) => !line.cardio);
   return h('div', { class: 'screen-body' },
     h('section', { class: 'card' },
       h('h2', {}, 'Session saved'),
-      h('p', { class: 'muted' }, 'Next time you do these lifts:'),
+      lifts.length > 0 && h('p', { class: 'muted' }, 'Next time you do these lifts:'),
       ...finished.summary.map((line) => h('div', { class: 'summary-line' },
         h('span', {}, line.name),
-        h('span', { class: 'mono' }, summaryText(line)),
+        h('span', { class: 'mono' }, summaryText(line, doc.exercises[line.exerciseId])),
       )),
+      backCheckIn(ctx, finished.sessionId),
       h('button', {
         class: 'primary wide',
         onclick: () => ctx.update((d) => { d.finishedSummary = null; }),
@@ -300,14 +300,33 @@ function renderSummary(ctx, finished) {
   );
 }
 
-function summaryText(line) {
-  if (line.calibrated) return `calibrated - ${fmtNumber(line.to)}`;
-  if (line.held) return `held at ${fmtNumber(line.to)}`;
+// One tap, three answers, on every finished session. History adds them up.
+function backCheckIn(ctx, sessionId) {
+  const session = ctx.doc.sessions.find((s) => s.id === sessionId);
+  if (!session) return null;
+  return h('div', { class: 'checkin' },
+    h('p', { class: 'muted' }, 'How is your back right now?'),
+    h('div', { class: 'row' }, ...BACK_RATINGS.map((r) => h('button', {
+      class: `small grow${session.back === r.id ? ' primary' : ''}`,
+      onclick: () => ctx.update((d) => rateBack(d, sessionId, r.id)),
+    }, r.label))),
+  );
+}
+
+// Read in the exercise's own terms: "Bodyweight", "BW + 10", "185 lb".
+export function summaryText(line, exercise) {
+  const load = (w) => (exercise ? fmtLoad(w, exercise) : fmtNumber(w));
+  if (line.calibrated) return `calibrated - ${load(line.to)}`;
+  if (line.held) return `held at ${load(line.to)}`;
   if (line.cardio) return `${line.from} -> ${line.to}`;
-  const arrow = `${fmtNumber(line.from)} -> ${fmtNumber(line.to)}`;
-  if (line.deloaded) return `${arrow} (deload)`;
-  if (line.addWeightSuggested) return `${arrow} (time to add weight)`;
-  return arrow;
+  if (line.deloaded) return `${load(line.from)} -> ${load(line.to)} (deload)`;
+  if (line.addWeightSuggested) return `${load(line.to)} - ready for a harder version`;
+  if (line.to !== line.from) return `${load(line.from)} -> ${load(line.to)}`;
+  // Same weight again. For an accessory that means the top of the range was
+  // not reached on every set yet; for a main or secondary lift, a missed rep.
+  const top = exercise?.repScheme?.repMax;
+  if (exercise?.type === 'accessory' && top) return `${load(line.to)} again - ${top} on every set moves it up`;
+  return `${load(line.to)} again`;
 }
 
 export function activeSession(doc, plan) {

@@ -2,6 +2,7 @@
 import { h, append, fmtDate, fmtNumber, fmtLoad } from './dom.js';
 import { DAY_NAMES } from '../engine/defaults.js';
 import { pacePerMile } from '../session.js';
+import { backSummary } from '../engine/back.js';
 
 export function renderHistory(ctx) {
   ctx.setTitle('History');
@@ -12,6 +13,7 @@ export function renderHistory(ctx) {
 
   return h('div', { class: 'screen-body' },
     lifted.length ? liftSection(ctx, lifted, chosen) : emptyLifts(),
+    backSection(ctx),
     cardioSection(ctx, sessions),
     sessionList(ctx, sessions),
   );
@@ -72,7 +74,7 @@ function liftSection(ctx, lifted, chosen) {
   return h('section', { class: 'card' },
     h('div', { class: 'titlebar' },
       h('h2', {}, 'Progress'),
-      h('a', { class: 'btn small ghost', href: `#/exercise/${chosen}` }, 'Detail'),
+      h('a', { class: 'btn small ghost', href: `#/exercise/${chosen}${lastSlot(doc, chosen)}` }, 'Detail'),
     ),
     h('hr', { class: 'rule' }),
     select,
@@ -85,6 +87,41 @@ function liftSection(ctx, lifted, chosen) {
       points.length > 1 && h('span', { class: 'muted' },
         `${moved >= 0 ? '+' : ''}${fmtNumber(moved)} lb over ${points.length} sessions`),
     ),
+  );
+}
+
+// The slot this lift was last logged in, so Detail swaps the right one.
+function lastSlot(doc, exerciseId) {
+  const sessions = [...(doc.sessions ?? [])].sort((a, b) => (a.date < b.date ? 1 : -1));
+  for (const s of sessions) {
+    const entry = (s.exercises ?? []).find((e) => e.exerciseId === exerciseId && e.slotId);
+    if (entry && doc.slots[entry.slotId]) return `/${entry.slotId}`;
+  }
+  return '';
+}
+
+const BACK_WORDS = { fine: 'fine', bit: 'a bit sore', sore: 'sore' };
+
+function backSection(ctx) {
+  const summary = backSummary(ctx.doc);
+  if (!summary.total) {
+    return h('section', { class: 'card' },
+      h('h3', {}, 'Back'),
+      h('p', { class: 'muted' }, 'Answer "How is your back?" when you finish a session and the pattern shows up here.'),
+    );
+  }
+  return h('section', { class: 'card' },
+    h('h3', {}, 'Back'),
+    h('p', { class: 'muted' }, `Sore after ${summary.sore} of ${summary.total} sessions you rated.`),
+    h('div', { class: 'back-dots', 'aria-label': 'Recent back ratings, oldest first' },
+      ...summary.recent.map((r) => h('span', {
+        class: `dot ${r.back}`,
+        title: `${r.dayName} ${r.date}: ${r.name}, ${BACK_WORDS[r.back]}`,
+      }, r.dayName.slice(0, 2)))),
+    h('div', { class: 'list' }, ...summary.byWorkout.map((w) => h('div', { class: 'item' },
+      h('span', {}, w.name),
+      h('span', { class: 'mono muted' }, `sore ${w.sore} of ${w.rated}`),
+    ))),
   );
 }
 

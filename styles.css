@@ -482,3 +482,29 @@ hr { border: 0; border-top: 1px solid var(--line-soft); margin: 2px 0; width: 10
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+
+/* --- back check-in -------------------------------------------------------- */
+.checkin { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
+.back-dots { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+.back-dots .dot {
+  width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 10px; font-weight: 650; color: var(--bg);
+}
+.back-dots .dot.fine { background: var(--good); }
+.back-dots .dot.bit { background: var(--warn); }
+.back-dots .dot.sore { background: var(--bad); }
+
+/* --- update prompt -------------------------------------------------------- */
+.update-bar {
+  position: fixed;
+  left: var(--pad); right: var(--pad);
+  top: calc(64px + env(safe-area-inset-top, 0px));
+  z-index: 40;
+  min-height: var(--tap);
+  background: var(--accent);
+  color: var(--accent-ink);
+  border: 0;
+  border-radius: var(--radius);
+  font-weight: 650;
+  box-shadow: var(--shadow);
+}

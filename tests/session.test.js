@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  startSession, finishSession, applyCalibration, pacePerMile,
+  startSession, finishSession, applyCalibration, pacePerMile, entryFor, ensureEntry,
   swapSlot, scheduleRotation, commitPendingRotations,
 } from '../src/session.js';
 import { planFor } from '../src/engine/template.js';
@@ -237,4 +237,28 @@ test('a rotation chosen in a deload week starts the week after', () => {
 test('choosing to keep the current exercise schedules nothing', () => {
   const d = scheduleRotation(doc(), 'lowerA-secondary', 'romanian-deadlift', '2026-09-28');
   assert.equal(d.slots['lowerA-secondary'].pending, null);
+});
+
+test('logged sets follow the slot, not the position in the list', () => {
+  const d = doc({ 'back-squat': 225, 'romanian-deadlift': 185 });
+  const plan = planFor(d, MON);
+  const session = startSession(plan, NOW);
+  // An older session that knew nothing of the last two slots, in another order.
+  session.exercises = [session.exercises[1], session.exercises[0]];
+  const legExt = plan.items.find((i) => i.exerciseId === 'leg-extension');
+  assert.equal(entryFor(session, plan.items[0]).exerciseId, 'back-squat');
+  assert.equal(entryFor(session, legExt), null);
+  ensureEntry(session, legExt).sets.push({ weight: 50, reps: 12 });
+  assert.equal(entryFor(session, legExt).sets.length, 1);
+  assert.equal(session.exercises.length, 3, 'added, not overwriting anything');
+});
+
+test('an exercise swapped mid-session gets its own entry', () => {
+  const d = doc({ 'back-squat': 225, 'romanian-deadlift': 185 });
+  const session = startSession(planFor(d, MON), NOW);
+  session.exercises[1].sets = [{ weight: 185, reps: 5 }];
+  d.slots['lowerA-secondary'].current = 'good-morning';
+  d.liftState['good-morning'] = { fiveRM: 110, workingWeight: 95 };
+  const gm = planFor(d, MON).items[1];
+  assert.equal(entryFor(session, gm), null, 'the RDL sets are not shown as good mornings');
 });

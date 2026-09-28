@@ -34,7 +34,8 @@ function unionBy(a = [], b = [], keyOf, prefer = (x, y) => (score(y) > score(x) 
 }
 
 function score(session) {
-  return `${session?.finishedAt ?? ''}${session?.startedAt ?? ''}`;
+  // editedAt: a finished session changed later, such as a back rating added.
+  return `${session?.finishedAt ?? ''}${session?.startedAt ?? ''}${session?.editedAt ?? ''}`;
 }
 
 function latestTouch(state) {

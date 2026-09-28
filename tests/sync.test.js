@@ -300,3 +300,12 @@ test('a request that never answers times out instead of wedging sync', async () 
   // And sync still works afterwards rather than staying stuck.
   assert.equal(await sync.syncNow().then((s) => s.state), 'error');
 });
+
+test('a back rating added after the session survives a merge with the older copy', () => {
+  const plain = session('a', '2026-09-21', T('18:00'));
+  const rated = { ...plain, back: 'sore', editedAt: T('19:00') };
+  for (const [local, remote] of [[plain, rated], [rated, plain]]) {
+    const { doc } = mergeDocuments(docAt(T('18:00'), { sessions: [local] }), docAt(T('18:30'), { sessions: [remote] }));
+    assert.equal(doc.sessions[0].back, 'sore');
+  }
+});
