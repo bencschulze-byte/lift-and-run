@@ -154,6 +154,7 @@ function setRow(ctx, plan, item, rampSet, i, isRamp) {
   );
   button.addEventListener('click', () => {
     if (button.consumedLongPress?.()) return;
+    if (tooSoon(item, i, isRamp)) return;
     if (!stored) logSet(ctx, plan, item, i, isRamp, { weight, reps: prescribedReps });
     else cycleReps(ctx, plan, item, i, isRamp, stored, prescribedReps);
   });
@@ -191,6 +192,19 @@ function openEditor(ctx, plan, item, i, isRamp, current) {
 // Which set just landed, so the re-render can animate that one button.
 let lastLogged = null;
 
+// A second tap on the same set within this long is an accidental double tap,
+// not a missed rep, and is ignored. A real miss is tapped after racking the bar.
+const DOUBLE_TAP_MS = 2000;
+const lastTap = new Map();
+
+function tooSoon(item, i, isRamp) {
+  const key = `${item.slotId}|${isRamp ? 'w' : ''}${i}`;
+  const now = Date.now();
+  const soon = now - (lastTap.get(key) ?? 0) < DOUBLE_TAP_MS;
+  if (!soon) lastTap.set(key, now);
+  return soon;
+}
+
 function logSet(ctx, plan, item, i, isRamp, { weight, reps }) {
   lastLogged = { slotId: item.slotId, i, isRamp };
   setTimeout(() => { lastLogged = null; }, 400);
@@ -212,15 +226,21 @@ function logSet(ctx, plan, item, i, isRamp, { weight, reps }) {
   ctx.wakeLock.acquire();
 }
 
+// Each later tap takes a rep off, and says so with an Undo, so a stray tap
+// can never quietly turn into a missed rep.
 function cycleReps(ctx, plan, item, i, isRamp, stored, prescribed) {
-  const next = Number(stored.reps) <= 0 ? prescribed : Number(stored.reps) - 1;
-  ctx.update((d) => {
+  const before = Number(stored.reps);
+  const next = before <= 0 ? prescribed : before - 1;
+  const setReps = (reps) => ctx.update((d) => {
     const entry = ensureEntry(d.activeSession, item);
     const target = isRamp
       ? entry.sets.find((s) => s.ramp && s.index === i)
       : entry.sets.filter((s) => !s.ramp)[i];
-    if (target) target.reps = next;
+    if (target) target.reps = reps;
   });
+  setReps(next);
+  const which = isRamp ? 'Warm-up' : `${item.exercise.name} set ${i + 1}`;
+  toast(`${which}: ${next} reps`, 5000, { label: 'Undo', run: () => setReps(before) });
 }
 
 function startingWeightForm(ctx, ex) {

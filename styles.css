@@ -470,6 +470,12 @@ ol.muted, ul.muted { padding-left: 20px; margin: 0; display: flex; flex-directio
   font-size: 14px;
   box-shadow: var(--shadow);
   animation: rise 0.22s var(--ease);
+  display: flex; align-items: center; gap: 14px;
+  width: max-content; max-width: calc(100vw - 32px);
+}
+.toast-action {
+  background: none; border: 0; padding: 4px 2px; min-height: 0;
+  color: var(--accent); font: inherit; font-weight: 600; white-space: nowrap;
 }
 @keyframes rise {
   from { opacity: 0; transform: translate(-50%, 8px); }

@@ -96,9 +96,16 @@ export function onLongPress(el, handler, ms = 450) {
 }
 
 let toastTimer = null;
-export function toast(message, ms = 2200) {
+// With an action, the toast carries a button (Undo) that runs it and closes.
+export function toast(message, ms = 2200, action = null) {
   document.querySelector('.toast')?.remove();
   const el = h('div', { class: 'toast' }, message);
+  if (action) {
+    el.append(h('button', {
+      class: 'toast-action',
+      onclick: () => { el.remove(); action.run(); },
+    }, action.label));
+  }
   document.body.append(el);
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.remove(), ms);

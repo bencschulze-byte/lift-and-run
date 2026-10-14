@@ -208,3 +208,26 @@ screen('exercise detail swaps the slot it was opened from', async () => {
   assert.equal(doc.slots['upperA-back'].current, 'bird-dog');
   assert.equal(doc.slots['lowerA-back'].current, 'bird-dog', 'Monday was already bird dog and is untouched');
 });
+
+screen('a quick double tap on a set is not a missed rep, and a real one can be undone', async () => {
+  await open('#/today');
+  await click('Start session');
+  const tapFirstWorkingSet = "[...document.querySelectorAll('.setrow:not(.ramp) button.tapset')][0].click(); true";
+  const squatReps = async () => (await stored()).activeSession.exercises
+    .find((e) => e.slotId === 'lowerA-main').sets.filter((s) => !s.ramp).map((s) => s.reps);
+
+  await evaluate(tapFirstWorkingSet);
+  await sleep(150);
+  await evaluate(tapFirstWorkingSet);
+  await sleep(200);
+  assert.deepEqual(await squatReps(), [5], 'the second tap was ignored');
+
+  await sleep(2000);
+  await evaluate(tapFirstWorkingSet);
+  await sleep(200);
+  assert.deepEqual(await squatReps(), [4], 'a deliberate tap later still takes a rep off');
+  assert.match(await evaluate("document.querySelector('.toast').textContent"), /Back squat set 1: 4 reps\s*Undo/);
+
+  await click('Undo');
+  assert.deepEqual(await squatReps(), [5], 'and Undo puts it back');
+});
