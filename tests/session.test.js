@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   startSession, finishSession, applyCalibration, pacePerMile, entryFor, ensureEntry,
-  swapSlot, scheduleRotation, commitPendingRotations,
+  swapSlot, scheduleRotation, commitPendingRotations, autoFinishStale,
 } from '../src/session.js';
 import { planFor } from '../src/engine/template.js';
 import { createProgramDocument } from '../src/engine/defaults.js';
@@ -292,4 +292,33 @@ test('Upper B rows for 5x5 and does chin-ups as an accessory', () => {
   const chin = items.find((i) => i.exerciseId === 'chin-up');
   assert.equal(chin.role, 'accessory');
   assert.equal(chin.weight, 0, 'bodyweight, nothing to ask for');
+});
+
+test('a session left open for two hours saves itself, timed to the last set', () => {
+  const d = doc({ 'back-squat': 225, 'romanian-deadlift': 185 });
+  const session = startSession(planFor(d, MON), new Date('2026-09-21T17:00:00Z'));
+  session.exercises[0].sets = [
+    { weight: 225, reps: 5, at: '2026-09-21T17:10:00Z' },
+    { weight: 225, reps: 5, at: '2026-09-21T17:41:00Z' },
+  ];
+  d.activeSession = session;
+
+  assert.equal(autoFinishStale(d, new Date('2026-09-21T18:59:00Z')), null, 'not before two hours');
+  const saved = autoFinishStale(d, new Date('2026-09-21T23:30:00Z'));
+  assert.equal(saved.activeSession, null);
+  const logged = saved.sessions.at(-1);
+  assert.equal(logged.id, session.id);
+  assert.equal(logged.finishedAt, '2026-09-21T17:41:00.000Z', 'ends at the last set, not hours later');
+  assert.equal(logged.autoFinished, true);
+  assert.equal(saved.finishedSummary.auto, true, 'and the summary says so');
+  assert.equal(saved.liftState['back-squat'].lastPerformed, MON, 'the lifts move on as if Finish was tapped');
+});
+
+test('a forgotten session with nothing logged is just closed', () => {
+  const d = doc();
+  d.activeSession = startSession(planFor(d, MON), new Date('2026-09-21T17:00:00Z'));
+  const out = autoFinishStale(d, new Date('2026-09-22T08:00:00Z'));
+  assert.equal(out.activeSession, null);
+  assert.equal(out.sessions.length, 0, 'nothing to save');
+  assert.equal(autoFinishStale(out, new Date('2026-09-22T08:00:00Z')), null);
 });

@@ -181,6 +181,27 @@ export function finishSession(doc, session, now = new Date()) {
   return { doc: next, summary };
 }
 
+// A session left running is saved for you once it is two hours old, as if
+// Finish had been tapped, and timed to the last set logged so the clock
+// learning is not thrown by the hours it sat open. One with nothing logged
+// is simply closed. Returns the new document, or null when there is nothing to do.
+export const AUTO_FINISH_MIN = 120;
+
+export function autoFinishStale(doc, now = new Date()) {
+  const session = doc?.activeSession;
+  if (!session?.startedAt || session.finishedAt) return null;
+  const start = new Date(session.startedAt).getTime();
+  if (new Date(now).getTime() - start < AUTO_FINISH_MIN * 60000) return null;
+
+  const sets = (session.exercises ?? []).flatMap((e) => e.sets ?? []);
+  if (!sets.some((s) => !s.ramp)) return { ...doc, activeSession: null };
+
+  const stamps = sets.map((s) => Date.parse(s.at)).filter(Number.isFinite);
+  const end = stamps.length ? Math.max(...stamps) : start + AUTO_FINISH_MIN * 60000;
+  const { doc: next, summary } = finishSession(doc, { ...session, autoFinished: true }, new Date(end));
+  return { ...next, finishedSummary: { sessionId: session.id, summary, date: session.date, auto: true } };
+}
+
 // Pace in minutes per mile, for the cardio trend on the History screen.
 export function pacePerMile(cardio) {
   if (!cardio?.distance || !cardio?.duration) return null;

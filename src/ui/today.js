@@ -286,6 +286,7 @@ function renderSummary(ctx, finished) {
   return h('div', { class: 'screen-body' },
     h('section', { class: 'card' },
       h('h2', {}, 'Session saved'),
+      finished.auto && h('p', { class: 'muted' }, 'Saved for you: it had been open for over two hours. Everything you logged is kept.'),
       lifts.length > 0 && h('p', { class: 'muted' }, 'Next time you do these lifts:'),
       ...finished.summary.map((line) => h('div', { class: 'summary-line' },
         h('span', {}, line.name),

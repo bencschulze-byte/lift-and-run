@@ -9,7 +9,7 @@ import { renderWeek } from './ui/week.js';
 import { renderHistory } from './ui/history.js';
 import { renderExercise } from './ui/exercise.js';
 import { renderSettings } from './ui/settings.js';
-import { commitPendingRotations } from './session.js';
+import { commitPendingRotations, autoFinishStale } from './session.js';
 import { createSync } from './sync.js';
 
 const storage = createStorage();
@@ -87,7 +87,19 @@ function markTab(hash) {
   }
 }
 
+// Forgot to tap Finish? Checked every tick, so it also happens the moment
+// the app comes back to the front.
+function saveForgottenSession() {
+  const doc = autoFinishStale(storage.load(), new Date());
+  if (!doc) return false;
+  storage.save(doc);
+  timer.stop();
+  wakeLock.release();
+  return true;
+}
+
 function tickClock() {
+  if (saveForgottenSession()) { render(); return; }
   const session = storage.load().activeSession;
   if (!session?.startedAt || session.finishedAt) {
     clockEl.hidden = true;
