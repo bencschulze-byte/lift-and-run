@@ -232,3 +232,12 @@ test('moving chin-ups out of the Upper B secondary keeps every logged chin-up', 
   assert.deepEqual(doc.liftState, old.liftState);
   assert.deepEqual(doc.sessions, old.sessions);
 });
+
+test('a phone running front squats on Thursday moves to barbell lunges', () => {
+  const old = createProgramDocument({ today: '2026-09-07' });
+  old.slots['lowerB-secondary'] = { ...old.slots['lowerB-secondary'], current: 'front-squat', options: ['front-squat', 'bulgarian-split-squat', 'leg-press'] };
+  old.liftState = { 'front-squat': { workingWeight: 135, fiveRM: 155 } };
+  const doc = migrate(JSON.parse(JSON.stringify(old)));
+  assert.equal(doc.slots['lowerB-secondary'].current, 'barbell-lunge');
+  assert.deepEqual(doc.liftState, old.liftState, 'the front squat weight is kept');
+});

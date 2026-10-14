@@ -35,6 +35,10 @@ const CATALOG = [
   secondary('barbell-hip-thrust', 'Barbell hip thrust', ['glutes'], { calibStart: 95, calibJump: 20, increment: 10 }),
 
   secondary('front-squat', 'Front squat', ['quads'], { calibStart: 45, calibJump: 15, increment: 5 }),
+  // Reps are per leg, as with the split squat.
+  secondary('barbell-lunge', 'Barbell lunge', ['quads', 'glutes'], {
+    unilateral: true, calibStart: 45, calibJump: 10, increment: 5,
+  }),
   secondary('bulgarian-split-squat', 'Bulgarian split squat', ['quads', 'glutes'], {
     loadType: 'dumbbell', unilateral: true, calibStart: 20, calibJump: 10, increment: 5,
   }),
@@ -152,6 +156,7 @@ const DESCRIPTIONS = {
   'good-morning': 'Bar on your upper back as if squatting. Both legs, knees soft. Hinge forward from the hips until your torso is close to parallel with the floor, then stand. Go light: this one humbles people.',
   'barbell-hip-thrust': 'Upper back against a bench, bar across your hips on a pad, both feet planted. Drive through your heels until your body makes a straight line from knees to shoulders, then lower.',
   'front-squat': 'Bar resting on the front of your shoulders with your elbows held high. Both legs. Squat down with your torso as upright as you can keep it.',
+  'barbell-lunge': 'Bar across your upper back as for a back squat. Step one foot back and lower your back knee until it nearly touches the floor, keeping your torso upright, then push through your front foot to stand back up. Do all the reps on one leg, then the other. Stepping back rather than forward is easier on the knees and the balance.',
   'bulgarian-split-squat': 'One leg at a time. Rear foot up on a bench behind you, a dumbbell in each hand. Lower until your front thigh is parallel to the floor, then stand. Finish all the reps on one leg before swapping.',
   'leg-press': 'Sitting in the machine with both feet on the platform. Push it away, then let it come back until your knees are bent to about a right angle.',
   'barbell-row': 'Hinge forward at the hips with a flat back, bar hanging at arms length. Pull it into your lower ribs, squeeze your shoulder blades together, and lower it under control.',
@@ -244,7 +249,9 @@ export const SLOTS = [
   backCare('upperA-back', 1, 'back-extension'),
   // Thu - Lower B
   slot('lowerB-main', 3, 'main', 'deadlift'),
-  slot('lowerB-secondary', 3, 'secondary', 'front-squat', ['bulgarian-split-squat', 'leg-press']),
+  // No front squat: holding the bar on the front of the shoulders aggravates
+  // Ben's delts. It stays in the catalog so its history keeps its name.
+  slot('lowerB-secondary', 3, 'secondary', 'barbell-lunge', ['bulgarian-split-squat', 'leg-press']),
   weekly('lowerB-acc1', 3, 'hanging-leg-raise', ['ab-wheel']),
   slot('lowerB-acc2', 3, 'accessory', 'cable-crunch', ['walking-lunge']),
   // Seated rather than standing: the standing machine loads the spine through
