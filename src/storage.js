@@ -70,7 +70,16 @@ export function normalize(doc) {
   for (const slot of SLOTS) {
     const stored = doc.slots?.[slot.id];
     // Whether a slot is optional is program data, never a stored choice.
-    out.slots[slot.id] = { ...slot, ...(stored ?? {}), options: slot.options.slice(), optional: slot.optional };
+    const merged = {
+      ...slot, ...(stored ?? {}), options: slot.options.slice(), optional: slot.optional, weekly: !!slot.weekly,
+    };
+    // A release can take an exercise off a slot's menu (chin-ups left the
+    // Upper B secondary). Then the slot starts on the new default; the old
+    // exercise keeps its history and stored weight.
+    if (!merged.options.includes(merged.current)) merged.current = slot.current;
+    if (merged.pending && !merged.options.includes(merged.pending.to)) merged.pending = null;
+    if (merged.thisWeek && !merged.options.includes(merged.thisWeek.to)) merged.thisWeek = null;
+    out.slots[slot.id] = merged;
   }
   out.liftState = { ...(doc.liftState ?? {}) };
   // The template is program data, not user data: nothing in the app edits it,

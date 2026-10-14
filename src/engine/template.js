@@ -1,7 +1,7 @@
 // "What am I doing today", built from the template, the calendar and the
 // stored lift state. Pure: hand it a document and a date, get a plan back.
 import { TEMPLATE, SLOTS, DAY_NAMES, EXERCISE_BY_ID, isCalibratedType } from './defaults.js';
-import { toISODate, dayIndexFor, mondayOf, addDays } from './dates.js';
+import { toISODate, dayIndexFor, mondayOf, addDays, weekIndexFor } from './dates.js';
 import { rampSets, restSecondsFor } from './warmup.js';
 import {
   isDeloadWeek, prescribedWeight, DELOAD_WEEK_SCHEME, DELOAD_WEEK_ACCESSORY_SETS,
@@ -71,7 +71,7 @@ export function planFor(doc, date = new Date()) {
     return { ...base, ...session, kind: session.kind, name: session.label ?? 'Zone 5 intervals', estimate: { total: session.totalMinutes, items: [] } };
   }
 
-  const items = day.slots.map((slotId) => buildItem(doc, slotsFor(doc)[slotId], { deload, settings }));
+  const items = day.slots.map((slotId) => buildItem(doc, slotsFor(doc)[slotId], { deload, settings, iso }));
   const estimate = personalise(estimateMinutes(items), personalPace(doc));
   return { ...base, items, estimate, overBudget: estimate.total > BUDGET_MIN };
 }
@@ -82,13 +82,25 @@ export function planForDayIndex(doc, dayIndex, date = new Date()) {
   return planFor({ ...doc, swaps }, iso);
 }
 
-function buildItem(doc, slot, { deload, settings }) {
-  const exercise = exerciseFor(doc, slot.current);
+// Which exercise a slot runs in the week of `iso`. A weekly slot steps
+// through its options one per week, counted from the program start, unless
+// it was swapped for that week only; any other slot runs its current choice.
+export function exerciseIdFor(doc, slot, iso) {
+  if (!slot?.weekly) return slot?.current;
+  const monday = mondayOf(iso);
+  if (slot.thisWeek?.week === monday && slot.options.includes(slot.thisWeek.to)) return slot.thisWeek.to;
+  const week = Math.max(0, weekIndexFor(doc?.settings?.programStart ?? monday, iso));
+  return slot.options[week % slot.options.length];
+}
+
+function buildItem(doc, slot, { deload, settings, iso }) {
+  const exercise = exerciseFor(doc, exerciseIdFor(doc, slot, iso));
   const state = doc?.liftState?.[exercise.id] ?? null;
   const calibrated = isCalibratedType(exercise);
   const item = {
     slotId: slot.id,
     role: slot.role,
+    weekly: !!slot.weekly,
     exerciseId: exercise.id,
     exercise,
     optional: !!slot.optional,

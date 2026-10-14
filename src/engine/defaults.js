@@ -59,6 +59,11 @@ const CATALOG = [
     loadType: 'belt', addedWeight: true, calibStart: 0, calibJump: 5, increment: 2.5,
     repScheme: { sets: 5, reps: 5 },
   }),
+  // Plates go on one end of a lever, so there is no bar to subtract and the
+  // load is just the plates: round it like a machine.
+  secondary('t-bar-row', 'Chest-supported T-bar row', ['back', 'biceps'], {
+    loadType: 'machine', calibStart: 45, calibJump: 10, increment: 5, repScheme: { sets: 5, reps: 5 },
+  }),
   secondary('lat-pulldown', 'Lat pulldown', ['lats', 'biceps'], {
     loadType: 'machine', calibStart: 70, calibJump: 10, increment: 5, repScheme: { sets: 5, reps: 5 },
   }),
@@ -79,6 +84,20 @@ const CATALOG = [
   }),
   accessory('incline-db-press', 'Incline DB press', ['chest', 'triceps'], {
     loadType: 'dumbbell', repScheme: { sets: 3, repMin: 8, repMax: 12 },
+  }),
+  accessory('incline-bench', 'Incline bench press', ['chest', 'shoulders', 'triceps'], {
+    loadType: 'barbell', repScheme: { sets: 3, repMin: 6, repMax: 10 },
+  }),
+  accessory('decline-bench', 'Decline bench press', ['chest', 'triceps'], {
+    loadType: 'barbell', repScheme: { sets: 3, repMin: 6, repMax: 10 },
+  }),
+
+  // Bodyweight pulling for reps, no belt. Stop a rep or so short of failure.
+  accessory('chin-up', 'Chin-up', ['lats', 'biceps'], {
+    loadType: 'bodyweight', step: 0, repScheme: { sets: 3, repMin: 5, repMax: 10 },
+  }),
+  accessory('pull-up', 'Pull-up', ['lats', 'biceps'], {
+    loadType: 'bodyweight', step: 0, repScheme: { sets: 3, repMin: 5, repMax: 10 },
   }),
 
   accessory('hanging-leg-raise', 'Hanging leg raise', ['core'], { loadType: 'bodyweight', step: 0 }),
@@ -140,6 +159,7 @@ const DESCRIPTIONS = {
   'chest-supported-row': 'Chest against the pad so your lower back is doing none of the work. Pull the handles to your ribs and squeeze.',
   'weighted-chinup': 'Hanging from the bar with your palms facing you, hands about shoulder width. Pull until your chin clears the bar. Once bodyweight is comfortable, hang plates from a dip belt and this app tracks that added weight.',
   'weighted-pullup': 'Same as a chin-up but with your palms facing away and hands wider. Harder on the back, less help from the biceps.',
+  't-bar-row': 'Lying face down on the angled pad, feet on the platform, gripping the handles of the T-bar. Pull the handles up toward your chest, squeeze your shoulder blades together, and lower under control. The pad holds your torso, so your lower back is doing none of the work. The weight is the plates you load on the end.',
   'lat-pulldown': 'Seated with your thighs under the pad. Pull the bar down to your collarbone by driving your elbows toward your hips.',
   'leg-curl': 'On the machine, curl your heels toward your backside against the pad, then let it back slowly.',
   'nordic-curl': 'Kneel with your ankles held down. Lower yourself face-first as slowly as you can manage, catch yourself with your hands, and push back up. Bodyweight only, and genuinely hard: a handful of reps is a good set.',
@@ -149,6 +169,10 @@ const DESCRIPTIONS = {
   'cable-lateral-raise': 'The same as the dumbbell version but on a low cable, which keeps tension on the shoulder the whole way down.',
   'cable-triceps-pushdown': 'Facing a high cable with your elbows pinned to your sides. Straighten your arms down, then let your hands come back up without your elbows drifting.',
   dips: 'On parallel bars, leaning forward slightly. Lower until your upper arms are parallel with the floor, then press back up. Bodyweight to start; add belt weight once 12 reps is easy.',
+  'incline-bench': 'A bench press on a bench set to about 30 degrees. Lower the bar to your upper chest, just under your collarbone, then press it back up over your shoulders. Expect to use less than your flat bench.',
+  'decline-bench': 'A bench press with your head lower than your hips and your legs hooked under the pads. Lower the bar to your lower chest and press it back up. The range is shorter than a flat bench; start lighter anyway until the angle feels familiar.',
+  'chin-up': 'Hanging from the bar with your palms facing you, hands about shoulder width. Pull until your chin clears the bar, then lower all the way to straight arms. Bodyweight only. End each set with about one good rep left rather than grinding to failure.',
+  'pull-up': 'The same as a chin-up but with your palms facing away and your hands a little wider. Harder on the back, less help from the biceps.',
   'incline-db-press': 'Bench set to about 30 degrees, a dumbbell in each hand. Press from the outside of your chest up to over your shoulders.',
   'hanging-leg-raise': 'Hang from a bar and raise your legs until your thighs are at least parallel with the floor, without swinging. Bend your knees if straight legs are too much for now.',
   'ab-wheel': 'Kneeling with both hands on the wheel. Roll out as far as you can go while stopping your lower back from sagging, then pull yourself back.',
@@ -195,26 +219,33 @@ const backCare = (id, dayIndex, current) => slot(
   id, dayIndex, 'accessory', current, BACK_CARE.filter((e) => e !== current), { optional: true },
 );
 
+// A weekly slot runs a different exercise each week, working through its
+// options in order. Each exercise keeps its own weight, so it picks up where
+// it left off the next time it comes round. Other slots stay put until swapped.
+const weekly = (id, dayIndex, current, options) => slot(id, dayIndex, 'accessory', current, options, { weekly: true });
+
 export const SLOTS = [
   // Mon - Lower A
   slot('lowerA-main', 0, 'main', 'back-squat'),
   slot('lowerA-secondary', 0, 'secondary', 'romanian-deadlift', ['good-morning', 'barbell-hip-thrust']),
-  slot('lowerA-acc1', 0, 'accessory', 'leg-curl', ['nordic-curl']),
-  slot('lowerA-acc2', 0, 'accessory', 'standing-calf-raise', ['seated-calf-raise']),
+  weekly('lowerA-acc1', 0, 'leg-curl', ['nordic-curl']),
+  weekly('lowerA-acc2', 0, 'standing-calf-raise', ['seated-calf-raise']),
+  // Kept steady: the Pallof press is there for the lower back.
   slot('lowerA-acc3', 0, 'accessory', 'pallof-press', ['ab-wheel', 'hanging-leg-raise', 'cable-crunch']),
-  slot('lowerA-acc4', 0, 'accessory', 'leg-extension', ['walking-lunge']),
+  weekly('lowerA-acc4', 0, 'leg-extension', ['walking-lunge']),
   backCare('lowerA-back', 0, 'bird-dog'),
   // Tue - Upper A
   slot('upperA-main', 1, 'main', 'bench-press'),
   slot('upperA-secondary', 1, 'secondary', 'barbell-row', ['pendlay-row', 'chest-supported-row']),
-  slot('upperA-acc1', 1, 'accessory', 'db-lateral-raise', ['cable-lateral-raise']),
-  slot('upperA-acc2', 1, 'accessory', 'cable-triceps-pushdown', ['dips', 'incline-db-press']),
-  slot('upperA-acc3', 1, 'accessory', 'cable-curl', ['hammer-curl']),
+  weekly('upperA-acc1', 1, 'db-lateral-raise', ['cable-lateral-raise']),
+  // A second press after the bench, at a different angle each week.
+  weekly('upperA-acc2', 1, 'incline-bench', ['decline-bench', 'incline-db-press', 'dips']),
+  weekly('upperA-acc3', 1, 'cable-curl', ['hammer-curl', 'barbell-curl', 'incline-db-curl']),
   backCare('upperA-back', 1, 'back-extension'),
   // Thu - Lower B
   slot('lowerB-main', 3, 'main', 'deadlift'),
   slot('lowerB-secondary', 3, 'secondary', 'front-squat', ['bulgarian-split-squat', 'leg-press']),
-  slot('lowerB-acc1', 3, 'accessory', 'hanging-leg-raise', ['ab-wheel']),
+  weekly('lowerB-acc1', 3, 'hanging-leg-raise', ['ab-wheel']),
   slot('lowerB-acc2', 3, 'accessory', 'cable-crunch', ['walking-lunge']),
   // Seated rather than standing: the standing machine loads the spine through
   // the shoulder pads.
@@ -222,10 +253,11 @@ export const SLOTS = [
   backCare('lowerB-back', 3, 'glute-bridge'),
   // Fri - Upper B
   slot('upperB-main', 4, 'main', 'overhead-press'),
-  slot('upperB-secondary', 4, 'secondary', 'weighted-chinup', ['weighted-pullup', 'lat-pulldown']),
-  slot('upperB-acc1', 4, 'accessory', 'barbell-curl', ['incline-db-curl', 'hammer-curl']),
-  slot('upperB-acc2', 4, 'accessory', 'face-pull', ['rear-delt-fly']),
-  slot('upperB-acc3', 4, 'accessory', 'overhead-triceps-extension', ['cable-triceps-pushdown']),
+  // A row that can be loaded for 5x5; chin-ups moved to the accessories.
+  slot('upperB-secondary', 4, 'secondary', 't-bar-row', ['lat-pulldown']),
+  slot('upperB-acc1', 4, 'accessory', 'chin-up', ['pull-up']),
+  weekly('upperB-acc2', 4, 'face-pull', ['rear-delt-fly']),
+  weekly('upperB-acc3', 4, 'overhead-triceps-extension', ['cable-triceps-pushdown']),
   backCare('upperB-back', 4, 'cable-pull-through'),
 ];
 

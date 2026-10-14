@@ -210,3 +210,25 @@ test('the extra and back-care slots reach an existing phone without touching its
   assert.deepEqual(doc.sessions, old.sessions);
   assert.deepEqual(doc.activeSession, old.activeSession, 'a session in progress is left alone');
 });
+
+test('moving chin-ups out of the Upper B secondary keeps every logged chin-up', () => {
+  // A phone as the previous release left it: weighted chin-ups in the
+  // secondary slot, barbell curls first among the accessories, a few weeks logged.
+  const old = createProgramDocument({ today: '2026-09-07' });
+  old.slots['upperB-secondary'] = { ...old.slots['upperB-secondary'], current: 'weighted-chinup', options: ['weighted-chinup', 'weighted-pullup', 'lat-pulldown'] };
+  old.slots['upperB-acc1'] = { ...old.slots['upperB-acc1'], current: 'barbell-curl', options: ['barbell-curl', 'incline-db-curl', 'hammer-curl'] };
+  old.slots['upperA-secondary'].current = 'pendlay-row';
+  old.liftState = { 'weighted-chinup': { workingWeight: 0, fiveRM: 0, failStreak: 2 }, 'barbell-curl': { workingWeight: 60 } };
+  old.sessions = [{
+    id: 's1', date: '2026-10-09', dayIndex: 4, kind: 'lift', finishedAt: 'x',
+    exercises: [{ exerciseId: 'weighted-chinup', slotId: 'upperB-secondary', role: 'secondary', sets: [{ weight: 0, reps: 7 }] }],
+  }];
+
+  const doc = migrate(JSON.parse(JSON.stringify(old)));
+  assert.equal(doc.slots['upperB-secondary'].current, 't-bar-row');
+  assert.equal(doc.slots['upperB-acc1'].current, 'chin-up');
+  assert.equal(doc.slots['upperA-secondary'].current, 'pendlay-row', 'choices still on the menu survive');
+  assert.ok(doc.exercises['weighted-chinup'], 'the old lift is still known, so its history has a name');
+  assert.deepEqual(doc.liftState, old.liftState);
+  assert.deepEqual(doc.sessions, old.sessions);
+});

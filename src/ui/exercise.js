@@ -4,6 +4,7 @@ import { h, append, fmtLoad, fmtNumber, fmtDate, fmtScheme, toast, confirmDanger
 import { weeksSince } from '../engine/dates.js';
 import { isCalibratedType } from '../engine/defaults.js';
 import { swapSlot } from '../session.js';
+import { exerciseIdFor } from '../engine/template.js';
 import { liftSeries, liftChart } from './history.js';
 
 const STALE_WEEKS = 8;
@@ -120,15 +121,18 @@ function swapCard(ctx, slot, exercise) {
   }
 
   const card = h('section', { class: 'card' },
-    h('h3', {}, 'Swap this slot'),
-    h('p', { class: 'muted' }, 'The slot keeps its progression rules. Anything you swap away keeps its weight for when you come back.'),
+    h('h3', {}, slot.weekly ? 'Changes every week' : 'Swap this slot'),
+    h('p', { class: 'muted' }, slot.weekly
+      ? 'This slot moves to the next exercise on the list each week, and each one keeps its own weight for when it comes back round. Swapping here changes this week only.'
+      : 'The slot keeps its progression rules. Anything you swap away keeps its weight for when you come back.'),
   );
+  const running = exerciseIdFor(doc, slot, ctx.today());
 
   for (const id of slot.options) {
     const other = doc.exercises[id];
     const stored = doc.liftState[id];
     const stale = weeksSince(stored?.calibratedAt, ctx.today());
-    const isCurrent = id === slot.current;
+    const isCurrent = id === running;
     append(card, h('div', { class: 'row between' },
       h('div', { class: 'grow' },
         h('div', {}, other?.name ?? id),
@@ -138,15 +142,15 @@ function swapCard(ctx, slot, exercise) {
             : 'never done'),
       ),
       isCurrent
-        ? h('span', { class: 'badge good' }, 'Current')
+        ? h('span', { class: 'badge good' }, slot.weekly ? 'This week' : 'Current')
         : h('button', {
           class: 'small',
           onclick: () => {
             ctx.storage.save(swapSlot(ctx.doc, slot.id, id, ctx.today()));
-            toast(`Slot now runs ${other?.name ?? id}`);
+            toast(slot.weekly ? `${other?.name ?? id} this week` : `Slot now runs ${other?.name ?? id}`);
             ctx.navigate(`#/exercise/${id}/${slot.id}`);
           },
-        }, 'Use this'),
+        }, slot.weekly ? 'This week' : 'Use this'),
     ));
   }
   return card;

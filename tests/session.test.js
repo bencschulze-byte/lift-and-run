@@ -262,3 +262,34 @@ test('an exercise swapped mid-session gets its own entry', () => {
   const gm = planFor(d, MON).items[1];
   assert.equal(entryFor(session, gm), null, 'the RDL sets are not shown as good mornings');
 });
+
+test('a weekly slot moves to its next exercise each week and comes back round', () => {
+  const d = doc();
+  d.liftState['incline-bench'] = { workingWeight: 135 };
+  const press = (iso) => planFor(d, iso).items.find((i) => i.slotId === 'upperA-acc2');
+  const tuesdays = ['2026-09-22', '2026-09-29', '2026-10-06', '2026-10-13', '2026-10-20'];
+  assert.deepEqual(tuesdays.map((t) => press(t).exerciseId),
+    ['incline-bench', 'decline-bench', 'incline-db-press', 'dips', 'incline-bench']);
+  assert.equal(press('2026-10-20').weight, 135, 'incline bench picks up its own weight again');
+  assert.equal(press('2026-09-29').needsStartingWeight, true, 'a first-time exercise asks for a weight');
+  assert.equal(planFor(d, '2026-09-21').items.find((i) => i.slotId === 'lowerA-acc3').exerciseId,
+    planFor(d, '2026-09-28').items.find((i) => i.slotId === 'lowerA-acc3').exerciseId, 'other slots stay put');
+});
+
+test('swapping a weekly slot changes this week only', () => {
+  let d = doc();
+  d = swapSlot(d, 'upperA-acc2', 'dips', '2026-09-22');
+  const press = (iso) => planFor(d, iso).items.find((i) => i.slotId === 'upperA-acc2').exerciseId;
+  assert.equal(press('2026-09-22'), 'dips');
+  assert.equal(press('2026-09-29'), 'decline-bench', 'next week carries on as planned');
+  assert.equal(d.slots['upperA-acc2'].current, 'incline-bench', 'the rotation itself is untouched');
+});
+
+test('Upper B rows for 5x5 and does chin-ups as an accessory', () => {
+  const items = planFor(doc(), '2026-09-25').items;
+  assert.equal(items[1].exerciseId, 't-bar-row');
+  assert.deepEqual(items[1].scheme, { sets: 5, reps: 5 });
+  const chin = items.find((i) => i.exerciseId === 'chin-up');
+  assert.equal(chin.role, 'accessory');
+  assert.equal(chin.weight, 0, 'bodyweight, nothing to ask for');
+});

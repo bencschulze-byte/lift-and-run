@@ -56,7 +56,7 @@ function rotationPrompt(ctx, today) {
   const effectiveFrom = addDays(mondayOf(today), 7);
   // In the order the week runs them, not the order they were stored in.
   const rotatable = doc.template.flatMap((d) => d.slots ?? []).map((id) => doc.slots[id])
-    .filter((s) => s?.rotatable && s.options.length > 1);
+    .filter((s) => s?.rotatable && !s.weekly && s.options.length > 1);
 
   return h('section', { class: 'card' },
     h('h2', {}, 'Rotate for next block?'),

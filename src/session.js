@@ -1,7 +1,7 @@
 // Turning a finished workout into new prescriptions. Takes a document and
 // returns a new one; the engine does the arithmetic, this does the bookkeeping.
 import { isCalibratedType } from './engine/defaults.js';
-import { toISODate } from './engine/dates.js';
+import { toISODate, mondayOf } from './engine/dates.js';
 import {
   evaluateLift, nextPrescription, nextAccessoryPrescription,
 } from './engine/progression.js';
@@ -190,12 +190,18 @@ export function pacePerMile(cardio) {
 // --- slot rotation --------------------------------------------------------
 
 // Swap a slot to one of its alternatives now. The previous exercise keeps its
-// stored state, so rotating back later restores its working weight.
+// stored state, so rotating back later restores its working weight. A weekly
+// slot is swapped for the rest of this week only; next week it moves on as usual.
 export function swapSlot(doc, slotId, toExerciseId, date) {
   const next = structuredClone(doc);
   const slot = next.slots[slotId];
   if (!slot) throw new Error(`unknown slot ${slotId}`);
   if (!slot.options.includes(toExerciseId)) throw new Error(`${toExerciseId} is not an option for ${slotId}`);
+  if (slot.weekly) {
+    slot.thisWeek = { week: mondayOf(date), to: toExerciseId };
+    next.rotations.push({ date, slotId, from: null, to: toExerciseId });
+    return next;
+  }
   if (slot.current === toExerciseId) return next;
   next.rotations.push({ date, slotId, from: slot.current, to: toExerciseId });
   slot.current = toExerciseId;

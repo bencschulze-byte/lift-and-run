@@ -11,6 +11,9 @@ installs to an iPhone home screen, works offline, keeps its data in `localStorag
 - Calendar-anchored: Monday is always Day 1. A missed day is missed, not made up.
 - Every lifting day ends with one optional back-care exercise (back extension, cable
   pull-through, glute bridge or bird dog), costed separately from the 45-minute budget.
+- Most accessory slots change exercise every week (incline / decline / incline DB press /
+  dips after the bench, for example); each exercise keeps its own weight. Upper B's 5x5
+  pull is a chest-supported T-bar row, with bodyweight chin-ups as an accessory.
 - Automatic 10% deload after three consecutive fails, and a deload week every 7th week.
 
 ## Run it locally
