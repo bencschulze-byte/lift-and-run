@@ -28,7 +28,9 @@ export function liftsWithHistory(doc) {
 }
 
 // One point per session: the top working set, the 1RM it implies (Epley), and
-// whether that session was a miss or a deload.
+// whether that session was a miss or a deload. Calibration days are left out:
+// the ramp climbs past the working weight on purpose, and charting it would
+// show a drop on the first real session that never happened.
 export function liftSeries(doc, exerciseId) {
   const deloadDates = new Set(
     (doc.deloads ?? []).filter((d) => d.exerciseId === exerciseId).map((d) => d.date),
@@ -36,7 +38,7 @@ export function liftSeries(doc, exerciseId) {
   const points = [];
   for (const session of [...(doc.sessions ?? [])].sort((a, b) => (a.date < b.date ? -1 : 1))) {
     for (const entry of session.exercises ?? []) {
-      if (entry.exerciseId !== exerciseId) continue;
+      if (entry.exerciseId !== exerciseId || entry.result === 'calibration') continue;
       const sets = (entry.sets ?? []).filter((s) => !s.ramp && Number(s.reps) > 0);
       if (!sets.length) continue;
       const top = Math.max(...sets.map((s) => Number(s.weight)));
